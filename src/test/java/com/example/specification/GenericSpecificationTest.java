@@ -5,7 +5,7 @@ import com.example.specification.domain.AuthorRepository;
 import com.example.specification.domain.Book;
 import com.example.specification.domain.BookRepository;
 import com.example.specification.domain.Genre;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.example.specification.web.QueryRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,8 +29,6 @@ class GenericSpecificationTest {
 
     @Autowired
     private AuthorRepository authorRepository;
-
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
     void seed() {
@@ -170,14 +168,12 @@ class GenericSpecificationTest {
     }
 
     @Test
-    void searchRequestAppliesPagingAndOrdering() {
-        SearchRequest request = new SearchRequest();
-        request.setFilter(SpecificationBuilder.<Book>and()
-                .isNotNull("author")
-                .toFilterGroup());
+    void queryRequestAppliesPagingAndOrdering() {
+        QueryRequest request = new QueryRequest();
+        request.setFilter("author isnot null");
+        request.setOrderBy("pages desc");
         request.setPage(0);
         request.setSize(2);
-        request.setSort(List.of(SortOrder.desc("pages")));
 
         Page<Book> page = bookRepository.findAll(request.<Book>toSpecification(), request.toPageable());
 
@@ -196,50 +192,15 @@ class GenericSpecificationTest {
 
     @Test
     void sortingOnNestedFieldWorks() {
-        SearchRequest request = new SearchRequest();
-        request.setFilter(SpecificationBuilder.<Book>and()
-                .eq("genre", Genre.SCIENCE)
-                .toFilterGroup());
-        request.setSort(List.of(SortOrder.asc("author.name")));
+        QueryRequest request = new QueryRequest();
+        request.setFilter("genre eq SCIENCE");
+        request.setOrderBy("author.name asc");
 
         Page<Book> page = bookRepository.findAll(request.<Book>toSpecification(), request.toPageable());
 
         assertThat(page.getContent())
                 .extracting(b -> b.getAuthor().getName())
                 .containsExactly("Donald Knuth", "Joshua Bloch");
-    }
-
-    @Test
-    void searchRequestDeserializesFromJson() throws Exception {
-        String json = """
-                {
-                  "filter": {
-                    "operator": "AND",
-                    "conditions": [
-                      {"field": "author.country", "operator": "EQUALS", "value": "USA"}
-                    ],
-                    "groups": [
-                      {
-                        "operator": "OR",
-                        "conditions": [
-                          {"field": "title", "operator": "LIKE", "value": "java"},
-                          {"field": "price", "operator": "BETWEEN", "values": [100, 200]}
-                        ]
-                      }
-                    ]
-                  },
-                  "page": 0,
-                  "size": 10,
-                  "sort": [{"field": "title", "direction": "ASC"}]
-                }
-                """;
-
-        SearchRequest request = objectMapper.readValue(json, SearchRequest.class);
-        Page<Book> page = bookRepository.findAll(request.<Book>toSpecification(), request.toPageable());
-
-        assertThat(page.getContent())
-                .extracting(Book::getTitle)
-                .containsExactly("Effective Java", "The Art of Computer Programming");
     }
 
     @Test

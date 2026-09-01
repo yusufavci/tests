@@ -1,6 +1,5 @@
 package com.example.specification.query;
 
-import com.example.specification.SortOrder;
 import org.springframework.data.domain.Sort;
 
 import java.util.ArrayList;
@@ -8,7 +7,7 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Parses OData-style {@code $orderby} expressions into {@link SortOrder}s:
+ * Parses OData-style {@code orderBy} expressions into a Spring {@link Sort}:
  * a comma-separated list of {@code field [asc|desc]}, direction defaulting to
  * ascending. Fields support the same dot notation as filters.
  *
@@ -19,12 +18,12 @@ public final class SortExpressionParser {
     private SortExpressionParser() {
     }
 
-    /** Parses the expression; a null or blank input yields an empty list. */
-    public static List<SortOrder> parse(String input) {
-        List<SortOrder> orders = new ArrayList<>();
+    /** Parses the expression; a null or blank input yields {@link Sort#unsorted()}. */
+    public static Sort parse(String input) {
         if (input == null || input.isBlank()) {
-            return orders;
+            return Sort.unsorted();
         }
+        List<Sort.Order> orders = new ArrayList<>();
         for (String segment : input.split(",")) {
             String trimmed = segment.trim();
             if (trimmed.isEmpty()) {
@@ -45,8 +44,8 @@ public final class SortExpressionParser {
                                     + "': expected 'asc' or 'desc'");
                 };
             }
-            orders.add(new SortOrder(parts[0], direction));
+            orders.add(new Sort.Order(direction, parts[0]));
         }
-        return orders;
+        return orders.isEmpty() ? Sort.unsorted() : Sort.by(orders);
     }
 }
