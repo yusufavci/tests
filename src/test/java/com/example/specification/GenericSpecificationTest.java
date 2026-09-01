@@ -191,6 +191,20 @@ class GenericSpecificationTest {
     }
 
     @Test
+    void queryRequestAppliesFieldMappings() {
+        QueryRequest request = new QueryRequest()
+                .withFieldMappings(java.util.Map.of("country", "author.country"));
+        request.setFilter("country eq 'UK'");
+        request.setOrderBy("country asc, pages asc");
+
+        Page<Book> page = bookRepository.findAll(request.<Book>toSpecification(), request.toPageable());
+
+        assertThat(page.getContent())
+                .extracting(Book::getTitle)
+                .containsExactly("The Hobbit", "The Lord of the Rings");
+    }
+
+    @Test
     void sortingOnNestedFieldWorks() {
         QueryRequest request = new QueryRequest();
         request.setFilter("genre eq SCIENCE");
