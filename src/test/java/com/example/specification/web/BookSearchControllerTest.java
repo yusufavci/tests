@@ -128,6 +128,25 @@ class BookSearchControllerTest {
     }
 
     @Test
+    void mapsClientFieldNamesToEntityPaths() throws Exception {
+        // authorName -> author.name, authorCountry -> author.country
+        mockMvc.perform(get("/books/search")
+                        .param("filter", "contains(authorName, 'tolkien') and authorCountry eq 'UK'")
+                        .param("orderBy", "authorName asc, pages desc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.content[0].title").value("The Lord of the Rings"))
+                .andExpect(jsonPath("$.content[1].title").value("The Hobbit"));
+
+        // Unmapped fields (title, and even direct entity paths) pass through unchanged.
+        mockMvc.perform(get("/books/search")
+                        .param("filter", "authorCountry eq 'USA' and title like 'java'"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].title").value("Effective Java"));
+    }
+
+    @Test
     void noFilterReturnsEverythingPaged() throws Exception {
         mockMvc.perform(get("/books/search").param("size", "3"))
                 .andExpect(status().isOk())

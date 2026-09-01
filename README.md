@@ -70,6 +70,30 @@ public class EmployeeController {
 }
 ```
 
+### Field mappings (client names → entity paths)
+
+When the names the frontend sends differ from the entity model — e.g. the client knows
+`userId` but the entity path is `user.id` — register per-endpoint mappings on the DTO.
+Mapped names are translated in both `filter` and `orderBy`; any field **not** in the
+mapping is searched as-is:
+
+```java
+private static final Map<String, String> FIELD_MAPPINGS = Map.of(
+        "userId", "user.id",
+        "userName", "user.name");
+
+@GetMapping("/search")
+public Page<Employee> search(@ModelAttribute QueryRequest query) {
+    query.withFieldMappings(FIELD_MAPPINGS);
+    return repository.findAll(query.<Employee>toSpecification(), query.toPageable());
+}
+```
+
+```
+GET /employees/search?filter=userId eq 42 and salary gt 50000&orderBy=userName asc
+        → WHERE user.id = 42 AND salary > 50000 ORDER BY user.name ASC
+```
+
 Example requests (values URL-encoded by the client):
 
 ```
