@@ -77,14 +77,12 @@ class FilterExpressionParserTest {
     }
 
     @Test
-    void notAppliesDeMorgan() {
-        FilterGroup group = FilterExpressionParser.parse(
-                "not (genre eq 'FICTION' or price gt 100)");
-
-        assertThat(group.getOperator()).isEqualTo(LogicalOperator.AND);
-        assertThat(group.getConditions()).containsExactly(
-                FilterCriteria.of("genre", SearchOperator.NOT_EQUALS, "FICTION"),
-                FilterCriteria.of("price", SearchOperator.LESS_THAN_OR_EQUAL, new BigDecimal("100")));
+    void negatedOperators() {
+        assertThat(FilterExpressionParser.parse("genre ne 'FICTION'").getConditions())
+                .containsExactly(FilterCriteria.of("genre", SearchOperator.NOT_EQUALS, "FICTION"));
+        assertThat(FilterExpressionParser.parse("genre notin ('FICTION', 'HISTORY')").getConditions())
+                .containsExactly(FilterCriteria.of("genre", SearchOperator.NOT_IN,
+                        java.util.List.of((Object) "FICTION", "HISTORY")));
     }
 
     @Test

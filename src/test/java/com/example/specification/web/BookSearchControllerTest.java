@@ -8,7 +8,7 @@ import com.example.specification.domain.Genre;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
@@ -106,7 +106,7 @@ class BookSearchControllerTest {
     }
 
     @Test
-    void supportsBetweenInAndNot() throws Exception {
+    void supportsBetweenInAndNegatedOperators() throws Exception {
         mockMvc.perform(get("/books/search")
                         .param("filter", "publishedDate between '1930-01-01' and '1960-12-31'"))
                 .andExpect(status().isOk())
@@ -117,9 +117,9 @@ class BookSearchControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(3));
 
-        // De Morgan: everything that is neither FICTION nor over 100 in price
+        // Negation via the negated operators: neither FICTION nor over 100 in price
         mockMvc.perform(get("/books/search")
-                        .param("filter", "not (genre eq FICTION or price gt 100)")
+                        .param("filter", "genre ne FICTION and price le 100")
                         .param("orderBy", "title"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(2))

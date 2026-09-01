@@ -4,12 +4,11 @@ A small, dependency-light toolkit for building dynamic queries with Spring Data 
 `Specification`s. It supports:
 
 - **Nested AND/OR condition trees** of arbitrary depth
-- **18 operators**: `EQUALS`, `NOT_EQUALS`, `GREATER_THAN`, `GREATER_THAN_OR_EQUAL`,
-  `LESS_THAN`, `LESS_THAN_OR_EQUAL`, `LIKE`, `NOT_LIKE`, `STARTS_WITH`, `ENDS_WITH`,
-  `NOT_STARTS_WITH`, `NOT_ENDS_WITH`, `IN`, `NOT_IN`, `IS_NULL`, `IS_NOT_NULL`,
-  `BETWEEN`, `NOT_BETWEEN`
+- **14 operators**: `EQUALS`, `NOT_EQUALS`, `GREATER_THAN`, `GREATER_THAN_OR_EQUAL`,
+  `LESS_THAN`, `LESS_THAN_OR_EQUAL`, `LIKE`, `STARTS_WITH`, `ENDS_WITH`,
+  `IN`, `NOT_IN`, `IS_NULL`, `IS_NOT_NULL`, `BETWEEN`
 - **OData-style filter strings** for GET endpoints — `name eq 'aaa' and salary isnot null`
-  is parsed into the same filter tree, with `and`/`or`/`not`, parentheses, `in`,
+  is parsed into the same filter tree, with `and`/`or`, parentheses, `in`,
   `between`, and `contains()`/`startswith()`/`endswith()` functions
 - **Nested property paths** with dot notation (`author.address.city`) — associations are
   resolved with reused LEFT joins, and queries through collection associations are
@@ -20,7 +19,7 @@ A small, dependency-light toolkit for building dynamic queries with Spring Data 
 
 ## Requirements
 
-- Java 21+, Spring Boot 3.x (Jakarta Persistence)
+- Java 21+, Spring Boot 4.x (Jakarta Persistence)
 - Your repository must extend `JpaSpecificationExecutor<T>`:
 
 ```java
@@ -80,24 +79,23 @@ GET /employees/search?filter=genre eq FICTION or (genre eq SCIENCE and pages gt 
                      &orderBy=pages desc, title asc&page=0&size=20
 GET /employees/search?filter=contains(author.name, 'tolkien') and
                      publishedDate between '1930-01-01' and '1960-12-31'
-GET /employees/search?filter=not (status in ('CLOSED', 'ARCHIVED'))
+GET /employees/search?filter=status notin ('CLOSED', 'ARCHIVED')
 ```
 
 ### Filter expression grammar
 
-Keywords are case-insensitive; precedence is `not` > `and` > `or`, with parentheses for
+Keywords are case-insensitive; `and` binds tighter than `or`, with parentheses for
 grouping:
 
 | Syntax | Meaning |
 |---|---|
 | `field eq value` / `field ne value` | equals / not equals (`eq null` → is-null) |
 | `field gt/ge/lt/le value` | comparisons (aliases `gte`, `lte`, `neq`) |
-| `field like 'x'` / `notlike` | case-insensitive contains |
+| `field like 'x'` | case-insensitive contains |
 | `contains(field, 'x')`, `startswith(field, 'x')`, `endswith(field, 'x')` | OData string functions |
 | `field in ('a', 'b')` / `notin` | membership |
 | `field between 1 and 10` | inclusive range |
 | `field is null`, `field is not null`, `field isnot null`, `field isnotnull` | null checks |
-| `not <expr>` | negation (folded via De Morgan) |
 
 Values: single-quoted strings (`''` escapes a quote), numbers, `true`/`false`, `null`,
 and bare words (handy for enum constants: `genre eq FICTION`). Fields support dot
@@ -176,7 +174,7 @@ the standard `Specification.and(...)` / `.or(...)` combinators.
 |---|---|---|
 | `EQUALS` / `NOT_EQUALS` | `value` | Works for enums/dates/UUIDs given as strings |
 | `GREATER_THAN` … `LESS_THAN_OR_EQUAL` | `value` | Attribute must be `Comparable` |
-| `LIKE` / `NOT_LIKE` | `value` | Case-insensitive *contains* |
+| `LIKE` | `value` | Case-insensitive *contains* |
 | `STARTS_WITH` / `ENDS_WITH` | `value` | Case-insensitive |
 | `IN` / `NOT_IN` | `values` | Non-empty list |
 | `IS_NULL` / `IS_NOT_NULL` | — | Also works on associations (`"field": "author"`) |

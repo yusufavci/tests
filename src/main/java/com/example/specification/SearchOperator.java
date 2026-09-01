@@ -13,19 +13,14 @@ public enum SearchOperator {
     LESS_THAN_OR_EQUAL,
     /** Case-insensitive "contains". */
     LIKE,
-    /** Case-insensitive "does not contain". */
-    NOT_LIKE,
     /** Case-insensitive prefix match. */
     STARTS_WITH,
     /** Case-insensitive suffix match. */
     ENDS_WITH,
-    NOT_STARTS_WITH,
-    NOT_ENDS_WITH,
     IN,
     NOT_IN,
     IS_NULL,
     IS_NOT_NULL,
     /** Inclusive range; expects exactly two entries in {@code values}. */
-    BETWEEN,
-    NOT_BETWEEN
+    BETWEEN
 }
