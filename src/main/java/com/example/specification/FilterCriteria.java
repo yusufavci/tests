@@ -1,7 +1,5 @@
 package com.example.specification;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-
 import java.util.List;
 import java.util.Objects;
 
@@ -15,7 +13,6 @@ import java.util.Objects;
  * and {@code BETWEEN} read {@code values}; {@code IS_NULL} / {@code IS_NOT_NULL}
  * need neither.</p>
  */
-@JsonInclude(JsonInclude.Include.NON_NULL)
 public class FilterCriteria {
 
     private String field;

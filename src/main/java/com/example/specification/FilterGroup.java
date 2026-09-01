@@ -1,7 +1,5 @@
 package com.example.specification;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,7 +14,6 @@ import java.util.List;
  *
  * <p>is a top-level AND group with one condition and one nested OR group.</p>
  */
-@JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class FilterGroup {
 
     private LogicalOperator operator = LogicalOperator.AND;
