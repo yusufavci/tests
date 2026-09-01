@@ -72,6 +72,17 @@ class BookSearchControllerTest {
     }
 
     @Test
+    void textEqualityIsCaseInsensitive() throws Exception {
+        mockMvc.perform(get("/books/search")
+                        .param("filter", "title eq 'the hobbit' or authorName eq 'JOSHUA BLOCH'")
+                        .param("orderBy", "title"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.content[0].title").value("Effective Java"))
+                .andExpect(jsonPath("$.content[1].title").value("The Hobbit"));
+    }
+
+    @Test
     void appliesPrecedencePagingAndOrdering() throws Exception {
         // FICTION (Hobbit 310, LOTR 1178) or (SCIENCE and pages > 600) (TAOCP 650)
         mockMvc.perform(get("/books/search")

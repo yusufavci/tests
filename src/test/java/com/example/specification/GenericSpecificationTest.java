@@ -126,6 +126,31 @@ class GenericSpecificationTest {
     }
 
     @Test
+    void textEqualityAndMembershipAreCaseInsensitive() {
+        Specification<Book> eq = SpecificationBuilder.<Book>and()
+                .eq("title", "the HOBBIT")
+                .build();
+        assertThat(bookRepository.findAll(eq))
+                .extracting(Book::getTitle)
+                .containsExactly("The Hobbit");
+
+        Specification<Book> notEq = SpecificationBuilder.<Book>and()
+                .eq("genre", Genre.FICTION)
+                .notEq("title", "the hobbit")
+                .build();
+        assertThat(bookRepository.findAll(notEq))
+                .extracting(Book::getTitle)
+                .containsExactly("The Lord of the Rings");
+
+        Specification<Book> in = SpecificationBuilder.<Book>and()
+                .in("author.name", "DONALD KNUTH", "joshua bloch")
+                .build();
+        assertThat(bookRepository.findAll(in))
+                .extracting(Book::getTitle)
+                .containsExactlyInAnyOrder("The Art of Computer Programming", "Effective Java");
+    }
+
+    @Test
     void inAndBetweenAndNullChecks() {
         Specification<Book> in = SpecificationBuilder.<Book>and()
                 .in("genre", "SCIENCE", "HISTORY")
