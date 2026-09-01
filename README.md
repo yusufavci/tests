@@ -112,11 +112,11 @@ grouping:
 
 | Syntax | Meaning |
 |---|---|
-| `field eq value` / `field ne value` | equals / not equals (`eq null` → is-null) |
+| `field eq value` / `field ne value` | equals / not equals — case-insensitive on text attributes (`eq null` → is-null) |
 | `field gt/ge/lt/le value` | comparisons (aliases `gte`, `lte`, `neq`) |
 | `field like 'x'` | case-insensitive contains |
 | `contains(field, 'x')`, `startswith(field, 'x')`, `endswith(field, 'x')` | OData string functions |
-| `field in ('a', 'b')` / `notin` | membership |
+| `field in ('a', 'b')` / `notin` | membership — case-insensitive on text attributes |
 | `field between 1 and 10` | inclusive range |
 | `field is null`, `field is not null`, `field isnot null`, `field isnotnull` | null checks |
 
@@ -154,11 +154,11 @@ conditions and further groups, combined by that group's operator (`AND` is the d
 
 | Operator | Input | Notes |
 |---|---|---|
-| `EQUALS` / `NOT_EQUALS` | `value` | Works for enums/dates/UUIDs given as strings |
+| `EQUALS` / `NOT_EQUALS` | `value` | Works for enums/dates/UUIDs given as strings; case-insensitive on String attributes |
 | `GREATER_THAN` … `LESS_THAN_OR_EQUAL` | `value` | Attribute must be `Comparable` |
 | `LIKE` | `value` | Case-insensitive *contains* |
 | `STARTS_WITH` / `ENDS_WITH` | `value` | Case-insensitive |
-| `IN` / `NOT_IN` | `values` | Non-empty list |
+| `IN` / `NOT_IN` | `values` | Non-empty list; case-insensitive on String attributes |
 | `IS_NULL` / `IS_NOT_NULL` | — | Also works on associations (`author isnot null`) |
 | `BETWEEN` | `values` | Exactly two entries, inclusive |
 
@@ -175,6 +175,9 @@ Invalid input (unknown field, wrong value count, unconvertible value) fails fast
   `password`-like columns), validate `FilterGroup` field names before building the
   specification.
 - Sorting on nested paths (`author.name`) is supported by Spring Data's `Sort` directly.
+- All text matching (LIKE family, and equality/membership on String attributes) is
+  case-insensitive via `LOWER(column)`; on large tables consider a function-based index
+  on `LOWER(column)` for the frequently filtered text columns.
 
 ## Running the tests
 

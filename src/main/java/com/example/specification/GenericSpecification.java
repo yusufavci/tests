@@ -20,7 +20,8 @@ import java.util.Locale;
  * arbitrarily nested AND/OR groups and dot-notation paths across associations
  * (resolved with reused LEFT joins). When a filter walks through a collection
  * association, the query is marked {@code distinct} so joined rows are not
- * duplicated.
+ * duplicated. All text matching is case-insensitive: the LIKE family always,
+ * and EQUALS/NOT_EQUALS/IN/NOT_IN whenever the attribute is a String.
  */
 public class GenericSpecification<T> implements Specification<T> {
 
@@ -84,8 +85,8 @@ public class GenericSpecification<T> implements Specification<T> {
         Class<?> javaType = path.getJavaType();
 
         return switch (criteria.getOperator()) {
-            case EQUALS -> cb.equal(path, convert(criteria, javaType));
-            case NOT_EQUALS -> cb.notEqual(path, convert(criteria, javaType));
+            case EQUALS -> equal(cb, path, criteria, javaType);
+            case NOT_EQUALS -> cb.not(equal(cb, path, criteria, javaType));
             case GREATER_THAN ->
                     cb.greaterThan((Expression<Comparable>) path, (Comparable) convert(criteria, javaType));
             case GREATER_THAN_OR_EQUAL ->
@@ -97,12 +98,33 @@ public class GenericSpecification<T> implements Specification<T> {
             case LIKE -> like(cb, path, criteria, "%", "%");
             case STARTS_WITH -> like(cb, path, criteria, "", "%");
             case ENDS_WITH -> like(cb, path, criteria, "%", "");
-            case IN -> path.in(convertList(criteria, javaType));
-            case NOT_IN -> cb.not(path.in(convertList(criteria, javaType)));
+            case IN -> in(cb, path, criteria, javaType);
+            case NOT_IN -> cb.not(in(cb, path, criteria, javaType));
             case IS_NULL -> cb.isNull(path);
             case IS_NOT_NULL -> cb.isNotNull(path);
             case BETWEEN -> between(cb, path, criteria, javaType);
         };
+    }
+
+    /** Equality; case-insensitive when the attribute is a String. */
+    private Predicate equal(CriteriaBuilder cb, Path<?> path, FilterCriteria criteria,
+                            Class<?> javaType) {
+        Object value = convert(criteria, javaType);
+        if (value instanceof String text) {
+            return cb.equal(cb.lower(path.as(String.class)), text.toLowerCase(Locale.ROOT));
+        }
+        return cb.equal(path, value);
+    }
+
+    /** Membership; case-insensitive when the attribute is a String. */
+    private Predicate in(CriteriaBuilder cb, Path<?> path, FilterCriteria criteria,
+                         Class<?> javaType) {
+        List<Object> values = convertList(criteria, javaType);
+        if (javaType == String.class) {
+            return cb.lower(path.as(String.class))
+                    .in(values.stream().map(v -> v.toString().toLowerCase(Locale.ROOT)).toList());
+        }
+        return path.in(values);
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})

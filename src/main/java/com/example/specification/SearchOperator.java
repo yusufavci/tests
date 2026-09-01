@@ -5,7 +5,9 @@ package com.example.specification;
  */
 public enum SearchOperator {
 
+    /** Case-insensitive when the attribute is a String. */
     EQUALS,
+    /** Case-insensitive when the attribute is a String. */
     NOT_EQUALS,
     GREATER_THAN,
     GREATER_THAN_OR_EQUAL,
@@ -17,7 +19,9 @@ public enum SearchOperator {
     STARTS_WITH,
     /** Case-insensitive suffix match. */
     ENDS_WITH,
+    /** Case-insensitive when the attribute is a String. */
     IN,
+    /** Case-insensitive when the attribute is a String. */
     NOT_IN,
     IS_NULL,
     IS_NOT_NULL,
