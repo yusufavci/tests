@@ -19,10 +19,13 @@ public enum SearchOperator {
     STARTS_WITH,
     /** Case-insensitive suffix match. */
     ENDS_WITH,
+    NOT_STARTS_WITH,
+    NOT_ENDS_WITH,
     IN,
     NOT_IN,
     IS_NULL,
     IS_NOT_NULL,
     /** Inclusive range; expects exactly two entries in {@code values}. */
-    BETWEEN
+    BETWEEN,
+    NOT_BETWEEN
 }

@@ -4,9 +4,13 @@ A small, dependency-light toolkit for building dynamic queries with Spring Data 
 `Specification`s. It supports:
 
 - **Nested AND/OR condition trees** of arbitrary depth
-- **15 operators**: `EQUALS`, `NOT_EQUALS`, `GREATER_THAN`, `GREATER_THAN_OR_EQUAL`,
+- **18 operators**: `EQUALS`, `NOT_EQUALS`, `GREATER_THAN`, `GREATER_THAN_OR_EQUAL`,
   `LESS_THAN`, `LESS_THAN_OR_EQUAL`, `LIKE`, `NOT_LIKE`, `STARTS_WITH`, `ENDS_WITH`,
-  `IN`, `NOT_IN`, `IS_NULL`, `IS_NOT_NULL`, `BETWEEN`
+  `NOT_STARTS_WITH`, `NOT_ENDS_WITH`, `IN`, `NOT_IN`, `IS_NULL`, `IS_NOT_NULL`,
+  `BETWEEN`, `NOT_BETWEEN`
+- **OData-style filter strings** for GET endpoints — `name eq 'aaa' and salary isnot null`
+  is parsed into the same filter tree, with `and`/`or`/`not`, parentheses, `in`,
+  `between`, and `contains()`/`startswith()`/`endswith()` functions
 - **Nested property paths** with dot notation (`author.address.city`) — associations are
   resolved with reused LEFT joins, and queries through collection associations are
   automatically made `distinct`
@@ -24,7 +28,89 @@ public interface BookRepository extends JpaRepository<Book, Long>, JpaSpecificat
 }
 ```
 
-## Usage from a REST endpoint
+## Architecture / separation of layers
+
+```
+GET request params            POST JSON body
+        │                            │
+   QueryRequest  (web DTO)           │
+        │  FilterExpressionParser    │
+        │  SortExpressionParser      │
+        ▼                            ▼
+   SearchRequest  ──── FilterGroup / FilterCriteria / SortOrder  (transport-agnostic model)
+        │
+        ▼
+   GenericSpecification<T>  +  Pageable   (persistence layer)
+        │
+        ▼
+   repository.findAll(spec, pageable)
+```
+
+- `com.example.specification` — the core model and `Specification` engine. No web
+  dependencies; usable from services, batch jobs, tests.
+- `com.example.specification.query` — parsers turning OData-style strings into the core
+  model (`FilterExpressionParser`, `SortExpressionParser`, `QueryParseException`).
+- `com.example.specification.web` — the controller-facing `QueryRequest` DTO and the
+  `QueryExceptionHandler` advice mapping bad queries to HTTP 400 problem details.
+
+## Usage from a GET endpoint (OData-style request params)
+
+Controllers bind the generic `QueryRequest` DTO from plain request parameters and stay
+one-liners:
+
+```java
+@RestController
+@RequestMapping("/employees")
+public class EmployeeController {
+
+    private final EmployeeRepository repository;
+
+    @GetMapping("/search")
+    public Page<Employee> search(@ModelAttribute QueryRequest query) {
+        return repository.findAll(query.<Employee>toSpecification(), query.toPageable());
+    }
+}
+```
+
+Example requests (values URL-encoded by the client):
+
+```
+GET /employees/search?filter=name eq 'aaa' and salary isnot null
+GET /employees/search?filter=genre eq FICTION or (genre eq SCIENCE and pages gt 600)
+                     &orderBy=pages desc, title asc&page=0&size=20
+GET /employees/search?filter=contains(author.name, 'tolkien') and
+                     publishedDate between '1930-01-01' and '1960-12-31'
+GET /employees/search?filter=not (status in ('CLOSED', 'ARCHIVED'))
+```
+
+### Filter expression grammar
+
+Keywords are case-insensitive; precedence is `not` > `and` > `or`, with parentheses for
+grouping:
+
+| Syntax | Meaning |
+|---|---|
+| `field eq value` / `field ne value` | equals / not equals (`eq null` → is-null) |
+| `field gt/ge/lt/le value` | comparisons (aliases `gte`, `lte`, `neq`) |
+| `field like 'x'` / `notlike` | case-insensitive contains |
+| `contains(field, 'x')`, `startswith(field, 'x')`, `endswith(field, 'x')` | OData string functions |
+| `field in ('a', 'b')` / `notin` | membership |
+| `field between 1 and 10` | inclusive range |
+| `field is null`, `field is not null`, `field isnot null`, `field isnotnull` | null checks |
+| `not <expr>` | negation (folded via De Morgan) |
+
+Values: single-quoted strings (`''` escapes a quote), numbers, `true`/`false`, `null`,
+and bare words (handy for enum constants: `genre eq FICTION`). Fields support dot
+notation across associations. Sorting uses `orderBy=field [asc|desc], ...`.
+
+Syntax errors and invalid values return `400 Bad Request` with an RFC 9457 problem body
+(via `QueryExceptionHandler`, active when the `web` package is component-scanned):
+
+```json
+{ "title": "Invalid query expression", "status": 400, "detail": "Expected a value but found end of expression" }
+```
+
+## Usage from a POST endpoint (JSON body)
 
 `SearchRequest` deserializes straight from JSON, so a single generic search endpoint is:
 

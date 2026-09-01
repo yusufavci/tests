@@ -98,20 +98,27 @@ public class GenericSpecification<T> implements Specification<T> {
             case NOT_LIKE -> cb.not(like(cb, path, criteria, "%", "%"));
             case STARTS_WITH -> like(cb, path, criteria, "", "%");
             case ENDS_WITH -> like(cb, path, criteria, "%", "");
+            case NOT_STARTS_WITH -> cb.not(like(cb, path, criteria, "", "%"));
+            case NOT_ENDS_WITH -> cb.not(like(cb, path, criteria, "%", ""));
             case IN -> path.in(convertList(criteria, javaType));
             case NOT_IN -> cb.not(path.in(convertList(criteria, javaType)));
             case IS_NULL -> cb.isNull(path);
             case IS_NOT_NULL -> cb.isNotNull(path);
-            case BETWEEN -> {
-                List<Object> range = convertList(criteria, javaType);
-                if (range.size() != 2) {
-                    throw new IllegalArgumentException(
-                            "BETWEEN expects exactly 2 values for field '" + criteria.getField() + "'");
-                }
-                yield cb.between((Expression<Comparable>) path,
-                        (Comparable) range.get(0), (Comparable) range.get(1));
-            }
+            case BETWEEN -> between(cb, path, criteria, javaType);
+            case NOT_BETWEEN -> cb.not(between(cb, path, criteria, javaType));
         };
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private Predicate between(CriteriaBuilder cb, Path<?> path, FilterCriteria criteria,
+                              Class<?> javaType) {
+        List<Object> range = convertList(criteria, javaType);
+        if (range.size() != 2) {
+            throw new IllegalArgumentException(
+                    "BETWEEN expects exactly 2 values for field '" + criteria.getField() + "'");
+        }
+        return cb.between((Expression<Comparable>) path,
+                (Comparable) range.get(0), (Comparable) range.get(1));
     }
 
     private Predicate like(CriteriaBuilder cb, Path<?> path, FilterCriteria criteria,
