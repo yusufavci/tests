@@ -124,6 +124,18 @@ Values: single-quoted strings (`''` escapes a quote), numbers, `true`/`false`, `
 and bare words (handy for enum constants: `genre eq FICTION`). Fields support dot
 notation across associations. Sorting uses `orderBy=field [asc|desc], ...`.
 
+Text comparisons are **case-insensitive by default**. Append `cs` to a text operator or
+function for exact-case matching, per condition — like PostgreSQL's `LIKE` vs `ILIKE`,
+mirrored:
+
+```
+?filter=username eqcs 'JDoe' and name like 'john'
+         └─ exact case              └─ case-insensitive
+```
+
+`eqcs`, `necs`, `likecs`, `startswithcs`, `endswithcs`, `incs`, `notincs`,
+`containscs(...)`, `startswithcs(...)`, `endswithcs(...)`.
+
 Syntax errors and invalid values return `400 Bad Request` with an RFC 9457 problem body
 (via `QueryExceptionHandler`, active when the `web` package is component-scanned):
 
@@ -175,9 +187,11 @@ Invalid input (unknown field, wrong value count, unconvertible value) fails fast
   `password`-like columns), validate `FilterGroup` field names before building the
   specification.
 - Sorting on nested paths (`author.name`) is supported by Spring Data's `Sort` directly.
-- All text matching (LIKE family, and equality/membership on String attributes) is
+- Default text matching (LIKE family, and equality/membership on String attributes) is
   case-insensitive via `LOWER(column)`; on large tables consider a function-based index
-  on `LOWER(column)` for the frequently filtered text columns.
+  on `LOWER(column)` for the frequently filtered text columns. The `cs` variants compare
+  the raw column and can use plain indexes. From code, exact-case conditions are built
+  with `FilterCriteria.of(...).caseSensitive()`.
 
 ## Running the tests
 

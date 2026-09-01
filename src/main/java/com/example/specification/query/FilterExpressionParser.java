@@ -25,7 +25,7 @@ import java.util.Locale;
  *              | path "is" ["not"] "null" | path "isnot" "null"
  * function    := ("contains"|"startswith"|"endswith") "(" path "," value ")"
  * op          := eq | ne | gt | ge | lt | le | like
- *                (aliases: neq, gte, lte)
+ *                (aliases: neq, gte, lte; text ops accept a "cs" suffix)
  * value       := 'string' | number | true | false | null | bareword
  * </pre>
  *
@@ -42,11 +42,21 @@ import java.util.Locale;
  * {@code eq null} / {@code ne null} map to IS_NULL / IS_NOT_NULL. Negation is
  * expressed through the negated operators themselves ({@code ne},
  * {@code notin}, the null checks); there is no {@code not} keyword.</p>
+ *
+ * <p>Text comparisons are case-insensitive by default. Appending {@code cs}
+ * to a text operator ({@code eqcs}, {@code necs}, {@code likecs},
+ * {@code startswithcs}, {@code endswithcs}, {@code incs}, {@code notincs}) or
+ * function ({@code containscs(...)}) switches that condition to exact-case
+ * matching.</p>
  */
 public final class FilterExpressionParser {
 
     /** Marker for the {@code null} literal, distinct from an absent value. */
     private static final Object NULL_LITERAL = new Object();
+
+    /** Text operators that accept the exact-case "cs" suffix. */
+    private static final java.util.Set<String> TEXT_OPERATORS =
+            java.util.Set.of("eq", "ne", "neq", "like", "startswith", "endswith", "in", "notin");
 
     private final List<Token> tokens;
     private int pos;
@@ -112,9 +122,12 @@ public final class FilterExpressionParser {
         Token first = expect(TokenType.IDENT);
         String lower = first.text.toLowerCase(Locale.ROOT);
 
-        // OData string functions: contains(path, 'x'), startswith(...), endswith(...)
+        // OData string functions: contains(path, 'x'), startswith(...), endswith(...);
+        // a "cs" suffix (containscs, ...) makes the match exact-case.
         if (peek().type == TokenType.LPAREN) {
-            SearchOperator fn = switch (lower) {
+            boolean fnCaseSensitive = stripCsSuffix(lower) != null;
+            String fnName = fnCaseSensitive ? stripCsSuffix(lower) : lower;
+            SearchOperator fn = switch (fnName) {
                 case "contains" -> SearchOperator.LIKE;
                 case "startswith" -> SearchOperator.STARTS_WITH;
                 case "endswith" -> SearchOperator.ENDS_WITH;
@@ -128,14 +141,24 @@ public final class FilterExpressionParser {
             if (value == NULL_LITERAL) {
                 throw error(first, "Function '" + lower + "' does not accept null");
             }
-            return FilterCriteria.of(path.text, fn, value);
+            FilterCriteria criteria = FilterCriteria.of(path.text, fn, value);
+            criteria.setCaseSensitive(fnCaseSensitive);
+            return criteria;
         }
 
         String field = first.text;
         Token opToken = expect(TokenType.IDENT);
         String op = opToken.text.toLowerCase(Locale.ROOT);
 
-        return switch (op) {
+        // A "cs" suffix on a text operator (eqcs, likecs, incs, ...) makes it exact-case.
+        boolean caseSensitive = false;
+        String base = stripCsSuffix(op);
+        if (base != null && TEXT_OPERATORS.contains(base)) {
+            caseSensitive = true;
+            op = base;
+        }
+
+        FilterCriteria criteria = switch (op) {
             case "eq" -> valueOrNullCheck(field, SearchOperator.EQUALS, SearchOperator.IS_NULL);
             case "ne", "neq" -> valueOrNullCheck(field, SearchOperator.NOT_EQUALS, SearchOperator.IS_NOT_NULL);
             case "gt" -> FilterCriteria.of(field, SearchOperator.GREATER_THAN, requireValue(op));
@@ -157,6 +180,13 @@ public final class FilterExpressionParser {
             case "isnotnull" -> FilterCriteria.of(field, SearchOperator.IS_NOT_NULL);
             default -> throw error(opToken, "Unknown operator '" + opToken.text + "'");
         };
+        criteria.setCaseSensitive(caseSensitive);
+        return criteria;
+    }
+
+    /** Returns the operator without its "cs" suffix, or null when there is none. */
+    private static String stripCsSuffix(String op) {
+        return op.length() > 2 && op.endsWith("cs") ? op.substring(0, op.length() - 2) : null;
     }
 
     private FilterCriteria parseIs(String field) {

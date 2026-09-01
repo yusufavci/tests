@@ -11,7 +11,8 @@ import java.util.Objects;
  * ("author.address.city"); each intermediate segment is resolved with a LEFT
  * join. Single-value operators read {@code value}; {@code IN}, {@code NOT_IN}
  * and {@code BETWEEN} read {@code values}; {@code IS_NULL} / {@code IS_NOT_NULL}
- * need neither.</p>
+ * need neither. Text comparisons are case-insensitive unless
+ * {@code caseSensitive} is set.</p>
  */
 public class FilterCriteria {
 
@@ -19,6 +20,7 @@ public class FilterCriteria {
     private SearchOperator operator;
     private Object value;
     private List<Object> values;
+    private boolean caseSensitive;
 
     public FilterCriteria() {
     }
@@ -79,6 +81,20 @@ public class FilterCriteria {
         this.values = values;
     }
 
+    public boolean isCaseSensitive() {
+        return caseSensitive;
+    }
+
+    public void setCaseSensitive(boolean caseSensitive) {
+        this.caseSensitive = caseSensitive;
+    }
+
+    /** Fluent switch to exact-case matching for text comparisons. */
+    public FilterCriteria caseSensitive() {
+        this.caseSensitive = true;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "FilterCriteria{" + field + " " + operator + " "
@@ -93,11 +109,12 @@ public class FilterCriteria {
         return Objects.equals(field, that.field)
                 && operator == that.operator
                 && Objects.equals(value, that.value)
-                && Objects.equals(values, that.values);
+                && Objects.equals(values, that.values)
+                && caseSensitive == that.caseSensitive;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(field, operator, value, values);
+        return Objects.hash(field, operator, value, values, caseSensitive);
     }
 }

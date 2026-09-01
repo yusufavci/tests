@@ -110,6 +110,29 @@ class FilterExpressionParserTest {
     }
 
     @Test
+    void csSuffixMarksConditionCaseSensitive() {
+        FilterCriteria criteria = FilterExpressionParser.parse("title eqcs 'The Hobbit'")
+                .getConditions().get(0);
+        assertThat(criteria.getOperator()).isEqualTo(SearchOperator.EQUALS);
+        assertThat(criteria.getValue()).isEqualTo("The Hobbit");
+        assertThat(criteria.isCaseSensitive()).isTrue();
+
+        assertThat(FilterExpressionParser.parse("title likecs 'Hobbit'")
+                .getConditions().get(0).isCaseSensitive()).isTrue();
+        assertThat(FilterExpressionParser.parse("containscs(title, 'Hobbit')")
+                .getConditions().get(0).isCaseSensitive()).isTrue();
+        assertThat(FilterExpressionParser.parse("genre incs ('FICTION')")
+                .getConditions().get(0).isCaseSensitive()).isTrue();
+
+        // Plain spellings stay case-insensitive; cs on non-text ops is unknown.
+        assertThat(FilterExpressionParser.parse("title eq 'x'")
+                .getConditions().get(0).isCaseSensitive()).isFalse();
+        assertThatThrownBy(() -> FilterExpressionParser.parse("pages gtcs 5"))
+                .isInstanceOf(QueryParseException.class)
+                .hasMessageContaining("Unknown operator 'gtcs'");
+    }
+
+    @Test
     void blankInputMatchesEverything() {
         assertThat(FilterExpressionParser.parse(null).isEmpty()).isTrue();
         assertThat(FilterExpressionParser.parse("   ").isEmpty()).isTrue();
