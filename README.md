@@ -8,7 +8,7 @@ A small, dependency-light toolkit for building dynamic queries with Spring Data 
   `LESS_THAN`, `LESS_THAN_OR_EQUAL`, `LIKE`, `STARTS_WITH`, `ENDS_WITH`,
   `IN`, `NOT_IN`, `IS_NULL`, `IS_NOT_NULL`, `BETWEEN`
 - **OData-style filter strings** for GET endpoints — `name eq 'aaa' and salary isnot null`
-  is parsed into the same filter tree, with `and`/`or`/`not`, parentheses, `in`,
+  is parsed into the same filter tree, with `and`/`or`, parentheses, `in`,
   `between`, and `contains()`/`startswith()`/`endswith()` functions
 - **Nested property paths** with dot notation (`author.address.city`) — associations are
   resolved with reused LEFT joins, and queries through collection associations are
@@ -19,7 +19,7 @@ A small, dependency-light toolkit for building dynamic queries with Spring Data 
 
 ## Requirements
 
-- Java 21+, Spring Boot 3.x (Jakarta Persistence)
+- Java 21+, Spring Boot 4.x (Jakarta Persistence)
 - Your repository must extend `JpaSpecificationExecutor<T>`:
 
 ```java
@@ -79,12 +79,12 @@ GET /employees/search?filter=genre eq FICTION or (genre eq SCIENCE and pages gt 
                      &orderBy=pages desc, title asc&page=0&size=20
 GET /employees/search?filter=contains(author.name, 'tolkien') and
                      publishedDate between '1930-01-01' and '1960-12-31'
-GET /employees/search?filter=not (status in ('CLOSED', 'ARCHIVED'))
+GET /employees/search?filter=status notin ('CLOSED', 'ARCHIVED')
 ```
 
 ### Filter expression grammar
 
-Keywords are case-insensitive; precedence is `not` > `and` > `or`, with parentheses for
+Keywords are case-insensitive; `and` binds tighter than `or`, with parentheses for
 grouping:
 
 | Syntax | Meaning |
@@ -96,7 +96,6 @@ grouping:
 | `field in ('a', 'b')` / `notin` | membership |
 | `field between 1 and 10` | inclusive range |
 | `field is null`, `field is not null`, `field isnot null`, `field isnotnull` | null checks |
-| `not <expr>` | negation (folded via De Morgan; not applicable to `like`, `startswith`, `endswith`, `between`) |
 
 Values: single-quoted strings (`''` escapes a quote), numbers, `true`/`false`, `null`,
 and bare words (handy for enum constants: `genre eq FICTION`). Fields support dot

@@ -77,14 +77,12 @@ class FilterExpressionParserTest {
     }
 
     @Test
-    void notAppliesDeMorgan() {
-        FilterGroup group = FilterExpressionParser.parse(
-                "not (genre eq 'FICTION' or price gt 100)");
-
-        assertThat(group.getOperator()).isEqualTo(LogicalOperator.AND);
-        assertThat(group.getConditions()).containsExactly(
-                FilterCriteria.of("genre", SearchOperator.NOT_EQUALS, "FICTION"),
-                FilterCriteria.of("price", SearchOperator.LESS_THAN_OR_EQUAL, new BigDecimal("100")));
+    void negatedOperators() {
+        assertThat(FilterExpressionParser.parse("genre ne 'FICTION'").getConditions())
+                .containsExactly(FilterCriteria.of("genre", SearchOperator.NOT_EQUALS, "FICTION"));
+        assertThat(FilterExpressionParser.parse("genre notin ('FICTION', 'HISTORY')").getConditions())
+                .containsExactly(FilterCriteria.of("genre", SearchOperator.NOT_IN,
+                        java.util.List.of((Object) "FICTION", "HISTORY")));
     }
 
     @Test
@@ -109,19 +107,6 @@ class FilterExpressionParserTest {
                 .containsExactly(FilterCriteria.of("title", SearchOperator.EQUALS, "O'Brien"));
         assertThat(FilterExpressionParser.parse("active eq true").getConditions())
                 .containsExactly(FilterCriteria.of("active", SearchOperator.EQUALS, Boolean.TRUE));
-    }
-
-    @Test
-    void notRejectsOperatorsWithoutNegatedCounterpart() {
-        assertThatThrownBy(() -> FilterExpressionParser.parse("not title like 'x'"))
-                .isInstanceOf(QueryParseException.class)
-                .hasMessageContaining("'not' cannot be applied to 'like'");
-        assertThatThrownBy(() -> FilterExpressionParser.parse("not (pages between 1 and 10)"))
-                .isInstanceOf(QueryParseException.class)
-                .hasMessageContaining("'not' cannot be applied to 'between'");
-        assertThatThrownBy(() -> FilterExpressionParser.parse("not startswith(title, 'The')"))
-                .isInstanceOf(QueryParseException.class)
-                .hasMessageContaining("startswith");
     }
 
     @Test

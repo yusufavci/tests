@@ -2,7 +2,6 @@ package com.example.specification.query;
 
 import com.example.specification.FilterCriteria;
 import com.example.specification.FilterGroup;
-import com.example.specification.LogicalOperator;
 import com.example.specification.SearchOperator;
 
 import java.math.BigDecimal;
@@ -13,13 +12,13 @@ import java.util.Locale;
 /**
  * Parses OData-style filter expressions into a {@link FilterGroup} tree.
  *
- * <p>Grammar (case-insensitive keywords, standard precedence:
- * {@code not} &gt; {@code and} &gt; {@code or}, parentheses for grouping):</p>
+ * <p>Grammar (case-insensitive keywords, {@code and} binds tighter than
+ * {@code or}, parentheses for grouping):</p>
  *
  * <pre>
  * expr        := andExpr ("or" andExpr)*
- * andExpr     := unaryExpr ("and" unaryExpr)*
- * unaryExpr   := "not" unaryExpr | "(" expr ")" | comparison | function
+ * andExpr     := primaryExpr ("and" primaryExpr)*
+ * primaryExpr := "(" expr ")" | comparison | function
  * comparison  := path op value
  *              | path "in" "(" value ("," value)* ")"
  *              | path "between" value "and" value
@@ -35,16 +34,14 @@ import java.util.Locale;
  * name eq 'aaa' and salary isnot null
  * genre eq FICTION or (genre eq SCIENCE and pages gt 600)
  * contains(author.name, 'tolkien') and publishedDate between '1930-01-01' and '1960-12-31'
- * not (status in ('CLOSED', 'ARCHIVED'))
+ * status notin ('CLOSED', 'ARCHIVED')
  * </pre>
  *
  * <p>String literals use single quotes with {@code ''} as the escape for a
  * quote. Bare words (e.g. enum constants) are treated as string values.
- * {@code eq null} / {@code ne null} map to IS_NULL / IS_NOT_NULL. {@code not}
- * is folded into the tree by negating operators and applying De Morgan to
- * groups, since {@link FilterGroup} has no negation node; {@code like},
- * {@code startswith}, {@code endswith} and {@code between} have no negated
- * counterpart and cannot appear under {@code not}.</p>
+ * {@code eq null} / {@code ne null} map to IS_NULL / IS_NOT_NULL. Negation is
+ * expressed through the negated operators themselves ({@code ne},
+ * {@code notin}, the null checks); there is no {@code not} keyword.</p>
  */
 public final class FilterExpressionParser {
 
@@ -88,7 +85,7 @@ public final class FilterExpressionParser {
     }
 
     private Object parseAnd() {
-        Object left = parseUnary();
+        Object left = parsePrimary();
         if (!peekKeyword("and")) {
             return left;
         }
@@ -96,16 +93,12 @@ public final class FilterExpressionParser {
         addChild(group, left);
         while (peekKeyword("and")) {
             next();
-            addChild(group, parseUnary());
+            addChild(group, parsePrimary());
         }
         return group;
     }
 
-    private Object parseUnary() {
-        if (peekKeyword("not")) {
-            next();
-            return negate(parseUnary());
-        }
+    private Object parsePrimary() {
         if (peek().type == TokenType.LPAREN) {
             next();
             Object inner = parseOr();
@@ -230,7 +223,7 @@ public final class FilterExpressionParser {
     }
 
     // ------------------------------------------------------------------
-    // Tree assembly and negation
+    // Tree assembly
     // ------------------------------------------------------------------
 
     private FilterGroup toGroup(Object node) {
@@ -246,48 +239,6 @@ public final class FilterExpressionParser {
         } else {
             parent.addGroup((FilterGroup) child);
         }
-    }
-
-    private Object negate(Object node) {
-        if (node instanceof FilterCriteria criteria) {
-            return negate(criteria);
-        }
-        // De Morgan: not (a AND b) == (not a) OR (not b)
-        FilterGroup group = (FilterGroup) node;
-        FilterGroup negated = new FilterGroup(
-                group.getOperator() == LogicalOperator.AND ? LogicalOperator.OR : LogicalOperator.AND);
-        for (FilterCriteria criteria : group.getConditions()) {
-            negated.addCondition(negate(criteria));
-        }
-        for (FilterGroup nested : group.getGroups()) {
-            addChild(negated, negate(nested));
-        }
-        return negated;
-    }
-
-    private FilterCriteria negate(FilterCriteria criteria) {
-        SearchOperator negated = switch (criteria.getOperator()) {
-            case EQUALS -> SearchOperator.NOT_EQUALS;
-            case NOT_EQUALS -> SearchOperator.EQUALS;
-            case GREATER_THAN -> SearchOperator.LESS_THAN_OR_EQUAL;
-            case GREATER_THAN_OR_EQUAL -> SearchOperator.LESS_THAN;
-            case LESS_THAN -> SearchOperator.GREATER_THAN_OR_EQUAL;
-            case LESS_THAN_OR_EQUAL -> SearchOperator.GREATER_THAN;
-            case IN -> SearchOperator.NOT_IN;
-            case NOT_IN -> SearchOperator.IN;
-            case IS_NULL -> SearchOperator.IS_NOT_NULL;
-            case IS_NOT_NULL -> SearchOperator.IS_NULL;
-            case LIKE, STARTS_WITH, ENDS_WITH, BETWEEN -> throw new QueryParseException(
-                    "'not' cannot be applied to '"
-                            + criteria.getOperator().name().replace("_", "").toLowerCase(Locale.ROOT)
-                            + "' on field '" + criteria.getField() + "'");
-        };
-        FilterCriteria result = new FilterCriteria();
-        result.setField(criteria.getField());
-        result.setOperator(negated);
-        result.setValue(criteria.getValue());
-        result.setValues(criteria.getValues());
-        return result;
     }
 
     // ------------------------------------------------------------------
