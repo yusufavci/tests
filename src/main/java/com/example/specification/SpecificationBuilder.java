@@ -63,10 +63,6 @@ public class SpecificationBuilder<T> {
         return add(field, SearchOperator.LIKE, value);
     }
 
-    public SpecificationBuilder<T> notLike(String field, String value) {
-        return add(field, SearchOperator.NOT_LIKE, value);
-    }
-
     public SpecificationBuilder<T> startsWith(String field, String value) {
         return add(field, SearchOperator.STARTS_WITH, value);
     }

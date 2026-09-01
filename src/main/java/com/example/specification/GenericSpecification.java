@@ -95,17 +95,13 @@ public class GenericSpecification<T> implements Specification<T> {
             case LESS_THAN_OR_EQUAL ->
                     cb.lessThanOrEqualTo((Expression<Comparable>) path, (Comparable) convert(criteria, javaType));
             case LIKE -> like(cb, path, criteria, "%", "%");
-            case NOT_LIKE -> cb.not(like(cb, path, criteria, "%", "%"));
             case STARTS_WITH -> like(cb, path, criteria, "", "%");
             case ENDS_WITH -> like(cb, path, criteria, "%", "");
-            case NOT_STARTS_WITH -> cb.not(like(cb, path, criteria, "", "%"));
-            case NOT_ENDS_WITH -> cb.not(like(cb, path, criteria, "%", ""));
             case IN -> path.in(convertList(criteria, javaType));
             case NOT_IN -> cb.not(path.in(convertList(criteria, javaType)));
             case IS_NULL -> cb.isNull(path);
             case IS_NOT_NULL -> cb.isNotNull(path);
             case BETWEEN -> between(cb, path, criteria, javaType);
-            case NOT_BETWEEN -> cb.not(between(cb, path, criteria, javaType));
         };
     }
 

@@ -112,6 +112,19 @@ class FilterExpressionParserTest {
     }
 
     @Test
+    void notRejectsOperatorsWithoutNegatedCounterpart() {
+        assertThatThrownBy(() -> FilterExpressionParser.parse("not title like 'x'"))
+                .isInstanceOf(QueryParseException.class)
+                .hasMessageContaining("'not' cannot be applied to 'like'");
+        assertThatThrownBy(() -> FilterExpressionParser.parse("not (pages between 1 and 10)"))
+                .isInstanceOf(QueryParseException.class)
+                .hasMessageContaining("'not' cannot be applied to 'between'");
+        assertThatThrownBy(() -> FilterExpressionParser.parse("not startswith(title, 'The')"))
+                .isInstanceOf(QueryParseException.class)
+                .hasMessageContaining("startswith");
+    }
+
+    @Test
     void blankInputMatchesEverything() {
         assertThat(FilterExpressionParser.parse(null).isEmpty()).isTrue();
         assertThat(FilterExpressionParser.parse("   ").isEmpty()).isTrue();

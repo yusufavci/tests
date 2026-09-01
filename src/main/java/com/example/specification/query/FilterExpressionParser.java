@@ -25,7 +25,7 @@ import java.util.Locale;
  *              | path "between" value "and" value
  *              | path "is" ["not"] "null" | path "isnot" "null"
  * function    := ("contains"|"startswith"|"endswith") "(" path "," value ")"
- * op          := eq | ne | gt | ge | lt | le | like | notlike
+ * op          := eq | ne | gt | ge | lt | le | like
  *                (aliases: neq, gte, lte)
  * value       := 'string' | number | true | false | null | bareword
  * </pre>
@@ -42,7 +42,9 @@ import java.util.Locale;
  * quote. Bare words (e.g. enum constants) are treated as string values.
  * {@code eq null} / {@code ne null} map to IS_NULL / IS_NOT_NULL. {@code not}
  * is folded into the tree by negating operators and applying De Morgan to
- * groups, since {@link FilterGroup} has no negation node.</p>
+ * groups, since {@link FilterGroup} has no negation node; {@code like},
+ * {@code startswith}, {@code endswith} and {@code between} have no negated
+ * counterpart and cannot appear under {@code not}.</p>
  */
 public final class FilterExpressionParser {
 
@@ -148,13 +150,11 @@ public final class FilterExpressionParser {
             case "lt" -> FilterCriteria.of(field, SearchOperator.LESS_THAN, requireValue(op));
             case "le", "lte" -> FilterCriteria.of(field, SearchOperator.LESS_THAN_OR_EQUAL, requireValue(op));
             case "like" -> FilterCriteria.of(field, SearchOperator.LIKE, requireValue(op));
-            case "notlike" -> FilterCriteria.of(field, SearchOperator.NOT_LIKE, requireValue(op));
             case "startswith" -> FilterCriteria.of(field, SearchOperator.STARTS_WITH, requireValue(op));
             case "endswith" -> FilterCriteria.of(field, SearchOperator.ENDS_WITH, requireValue(op));
             case "in" -> FilterCriteria.of(field, SearchOperator.IN, parseValueList());
             case "notin" -> FilterCriteria.of(field, SearchOperator.NOT_IN, parseValueList());
             case "between" -> parseBetween(field, SearchOperator.BETWEEN);
-            case "notbetween" -> parseBetween(field, SearchOperator.NOT_BETWEEN);
             case "is" -> parseIs(field);
             case "isnot" -> {
                 expectKeyword("null");
@@ -273,18 +273,14 @@ public final class FilterExpressionParser {
             case GREATER_THAN_OR_EQUAL -> SearchOperator.LESS_THAN;
             case LESS_THAN -> SearchOperator.GREATER_THAN_OR_EQUAL;
             case LESS_THAN_OR_EQUAL -> SearchOperator.GREATER_THAN;
-            case LIKE -> SearchOperator.NOT_LIKE;
-            case NOT_LIKE -> SearchOperator.LIKE;
-            case STARTS_WITH -> SearchOperator.NOT_STARTS_WITH;
-            case NOT_STARTS_WITH -> SearchOperator.STARTS_WITH;
-            case ENDS_WITH -> SearchOperator.NOT_ENDS_WITH;
-            case NOT_ENDS_WITH -> SearchOperator.ENDS_WITH;
             case IN -> SearchOperator.NOT_IN;
             case NOT_IN -> SearchOperator.IN;
             case IS_NULL -> SearchOperator.IS_NOT_NULL;
             case IS_NOT_NULL -> SearchOperator.IS_NULL;
-            case BETWEEN -> SearchOperator.NOT_BETWEEN;
-            case NOT_BETWEEN -> SearchOperator.BETWEEN;
+            case LIKE, STARTS_WITH, ENDS_WITH, BETWEEN -> throw new QueryParseException(
+                    "'not' cannot be applied to '"
+                            + criteria.getOperator().name().replace("_", "").toLowerCase(Locale.ROOT)
+                            + "' on field '" + criteria.getField() + "'");
         };
         FilterCriteria result = new FilterCriteria();
         result.setField(criteria.getField());
