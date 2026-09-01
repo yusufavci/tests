@@ -106,21 +106,21 @@ public class GenericSpecification<T> implements Specification<T> {
         };
     }
 
-    /** Equality; case-insensitive when the attribute is a String. */
+    /** Equality; case-insensitive when the attribute is a String, unless the condition opts out. */
     private Predicate equal(CriteriaBuilder cb, Path<?> path, FilterCriteria criteria,
                             Class<?> javaType) {
         Object value = convert(criteria, javaType);
-        if (value instanceof String text) {
+        if (value instanceof String text && !criteria.isCaseSensitive()) {
             return cb.equal(cb.lower(path.as(String.class)), text.toLowerCase(Locale.ROOT));
         }
         return cb.equal(path, value);
     }
 
-    /** Membership; case-insensitive when the attribute is a String. */
+    /** Membership; case-insensitive when the attribute is a String, unless the condition opts out. */
     private Predicate in(CriteriaBuilder cb, Path<?> path, FilterCriteria criteria,
                          Class<?> javaType) {
         List<Object> values = convertList(criteria, javaType);
-        if (javaType == String.class) {
+        if (javaType == String.class && !criteria.isCaseSensitive()) {
             return cb.lower(path.as(String.class))
                     .in(values.stream().map(v -> v.toString().toLowerCase(Locale.ROOT)).toList());
         }
@@ -142,6 +142,9 @@ public class GenericSpecification<T> implements Specification<T> {
     private Predicate like(CriteriaBuilder cb, Path<?> path, FilterCriteria criteria,
                            String prefix, String suffix) {
         Object value = requireValue(criteria);
+        if (criteria.isCaseSensitive()) {
+            return cb.like(path.as(String.class), prefix + value + suffix);
+        }
         String pattern = prefix + value.toString().toLowerCase(Locale.ROOT) + suffix;
         return cb.like(cb.lower(path.as(String.class)), pattern);
     }

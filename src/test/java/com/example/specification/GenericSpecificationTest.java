@@ -216,6 +216,30 @@ class GenericSpecificationTest {
     }
 
     @Test
+    void caseSensitiveConditionsMatchExactCase() {
+        Specification<Book> wrongCase = GenericSpecification.of(
+                FilterCriteria.of("title", SearchOperator.EQUALS, "the hobbit").caseSensitive());
+        assertThat(bookRepository.findAll(wrongCase)).isEmpty();
+
+        Specification<Book> exactCase = GenericSpecification.of(
+                FilterCriteria.of("title", SearchOperator.EQUALS, "The Hobbit").caseSensitive());
+        assertThat(bookRepository.findAll(exactCase))
+                .extracting(Book::getTitle)
+                .containsExactly("The Hobbit");
+
+        Specification<Book> likeWrongCase = GenericSpecification.of(
+                FilterCriteria.of("title", SearchOperator.LIKE, "hobbit").caseSensitive());
+        assertThat(bookRepository.findAll(likeWrongCase)).isEmpty();
+
+        Specification<Book> inExactCase = GenericSpecification.of(
+                FilterCriteria.of("author.name", SearchOperator.IN,
+                        List.of((Object) "Donald Knuth", "joshua bloch")).caseSensitive());
+        assertThat(bookRepository.findAll(inExactCase))
+                .extracting(Book::getTitle)
+                .containsExactly("The Art of Computer Programming");
+    }
+
+    @Test
     void queryRequestAppliesFieldMappings() {
         QueryRequest request = new QueryRequest()
                 .withFieldMappings(java.util.Map.of("country", "author.country"));

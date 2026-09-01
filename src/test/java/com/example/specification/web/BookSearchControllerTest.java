@@ -72,6 +72,20 @@ class BookSearchControllerTest {
     }
 
     @Test
+    void csSuffixSwitchesToExactCaseMatching() throws Exception {
+        mockMvc.perform(get("/books/search")
+                        .param("filter", "title eqcs 'the hobbit'"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(0));
+
+        mockMvc.perform(get("/books/search")
+                        .param("filter", "title eqcs 'The Hobbit'"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].title").value("The Hobbit"));
+    }
+
+    @Test
     void textEqualityIsCaseInsensitive() throws Exception {
         mockMvc.perform(get("/books/search")
                         .param("filter", "title eq 'the hobbit' or authorName eq 'JOSHUA BLOCH'")
