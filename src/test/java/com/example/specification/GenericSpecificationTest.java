@@ -5,6 +5,7 @@ import com.example.specification.domain.AuthorRepository;
 import com.example.specification.domain.Book;
 import com.example.specification.domain.BookRepository;
 import com.example.specification.domain.Genre;
+import com.example.specification.domain.TestData;
 import com.example.specification.web.QueryRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,8 +15,6 @@ import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.domain.Specification;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -32,25 +31,7 @@ class GenericSpecificationTest {
 
     @BeforeEach
     void seed() {
-        Author knuth = new Author("Donald Knuth", "USA");
-        knuth.addBook(new Book("The Art of Computer Programming", 650,
-                new BigDecimal("120.00"), LocalDate.of(1968, 1, 1), Genre.SCIENCE));
-
-        Author bloch = new Author("Joshua Bloch", "USA");
-        bloch.addBook(new Book("Effective Java", 412,
-                new BigDecimal("45.50"), LocalDate.of(2018, 1, 6), Genre.SCIENCE));
-
-        Author tolkien = new Author("J.R.R. Tolkien", "UK");
-        tolkien.addBook(new Book("The Hobbit", 310,
-                new BigDecimal("15.99"), LocalDate.of(1937, 9, 21), Genre.FICTION));
-        tolkien.addBook(new Book("The Lord of the Rings", 1178,
-                new BigDecimal("29.99"), LocalDate.of(1954, 7, 29), Genre.FICTION));
-
-        authorRepository.saveAll(List.of(knuth, bloch, tolkien));
-
-        // A book without an author, for null checks.
-        bookRepository.save(new Book("Anonymous Chronicle", 200,
-                new BigDecimal("9.99"), LocalDate.of(2020, 5, 1), Genre.HISTORY));
+        TestData.seed(authorRepository, bookRepository);
     }
 
     @Test
@@ -218,22 +199,22 @@ class GenericSpecificationTest {
     @Test
     void caseSensitiveConditionsMatchExactCase() {
         Specification<Book> wrongCase = GenericSpecification.of(
-                FilterCriteria.of("title", SearchOperator.EQUALS, "the hobbit").caseSensitive());
+                FilterCriteria.of("title", SearchOperator.EQUALS, "the hobbit").exactCase());
         assertThat(bookRepository.findAll(wrongCase)).isEmpty();
 
         Specification<Book> exactCase = GenericSpecification.of(
-                FilterCriteria.of("title", SearchOperator.EQUALS, "The Hobbit").caseSensitive());
+                FilterCriteria.of("title", SearchOperator.EQUALS, "The Hobbit").exactCase());
         assertThat(bookRepository.findAll(exactCase))
                 .extracting(Book::getTitle)
                 .containsExactly("The Hobbit");
 
         Specification<Book> likeWrongCase = GenericSpecification.of(
-                FilterCriteria.of("title", SearchOperator.LIKE, "hobbit").caseSensitive());
+                FilterCriteria.of("title", SearchOperator.LIKE, "hobbit").exactCase());
         assertThat(bookRepository.findAll(likeWrongCase)).isEmpty();
 
         Specification<Book> inExactCase = GenericSpecification.of(
                 FilterCriteria.of("author.name", SearchOperator.IN,
-                        List.of((Object) "Donald Knuth", "joshua bloch")).caseSensitive());
+                        List.of((Object) "Donald Knuth", "joshua bloch")).exactCase());
         assertThat(bookRepository.findAll(inExactCase))
                 .extracting(Book::getTitle)
                 .containsExactly("The Art of Computer Programming");

@@ -1,10 +1,8 @@
 package com.example.specification.web;
 
-import com.example.specification.domain.Author;
 import com.example.specification.domain.AuthorRepository;
-import com.example.specification.domain.Book;
 import com.example.specification.domain.BookRepository;
-import com.example.specification.domain.Genre;
+import com.example.specification.domain.TestData;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,10 +10,6 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.List;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -38,27 +32,7 @@ class BookSearchControllerTest {
 
     @BeforeEach
     void seed() {
-        bookRepository.deleteAll();
-        authorRepository.deleteAll();
-
-        Author knuth = new Author("Donald Knuth", "USA");
-        knuth.addBook(new Book("The Art of Computer Programming", 650,
-                new BigDecimal("120.00"), LocalDate.of(1968, 1, 1), Genre.SCIENCE));
-
-        Author bloch = new Author("Joshua Bloch", "USA");
-        bloch.addBook(new Book("Effective Java", 412,
-                new BigDecimal("45.50"), LocalDate.of(2018, 1, 6), Genre.SCIENCE));
-
-        Author tolkien = new Author("J.R.R. Tolkien", "UK");
-        tolkien.addBook(new Book("The Hobbit", 310,
-                new BigDecimal("15.99"), LocalDate.of(1937, 9, 21), Genre.FICTION));
-        tolkien.addBook(new Book("The Lord of the Rings", 1178,
-                new BigDecimal("29.99"), LocalDate.of(1954, 7, 29), Genre.FICTION));
-
-        authorRepository.saveAll(List.of(knuth, bloch, tolkien));
-
-        bookRepository.save(new Book("Anonymous Chronicle", 200,
-                new BigDecimal("9.99"), LocalDate.of(2020, 5, 1), Genre.HISTORY));
+        TestData.seed(authorRepository, bookRepository);
     }
 
     @Test
