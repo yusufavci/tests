@@ -120,9 +120,9 @@ class BookSearchControllerTest {
     }
 
     @Test
-    void filtersAcrossAssociationsWithFunctions() throws Exception {
+    void filtersAcrossAssociations() throws Exception {
         mockMvc.perform(get("/books/search")
-                        .param("filter", "contains(author.name, 'TOLKIEN')")
+                        .param("filter", "author.name like 'TOLKIEN'")
                         .param("orderBy", "publishedDate asc"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(2))
@@ -156,7 +156,7 @@ class BookSearchControllerTest {
     void mapsClientFieldNamesToEntityPaths() throws Exception {
         // authorName -> author.name, authorCountry -> author.country
         mockMvc.perform(get("/books/search")
-                        .param("filter", "contains(authorName, 'tolkien') and authorCountry eq 'UK'")
+                        .param("filter", "authorName like 'tolkien' and authorCountry eq 'UK'")
                         .param("orderBy", "authorName asc, pages desc"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(2))

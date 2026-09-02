@@ -86,10 +86,10 @@ class FilterExpressionParserTest {
     }
 
     @Test
-    void functionsAndLists() {
-        assertThat(FilterExpressionParser.parse("contains(author.name, 'tolkien')").getConditions())
+    void textOperatorsAndLists() {
+        assertThat(FilterExpressionParser.parse("author.name like 'tolkien'").getConditions())
                 .containsExactly(FilterCriteria.of("author.name", SearchOperator.LIKE, "tolkien"));
-        assertThat(FilterExpressionParser.parse("startswith(title, 'The')").getConditions())
+        assertThat(FilterExpressionParser.parse("title startswith 'The'").getConditions())
                 .containsExactly(FilterCriteria.of("title", SearchOperator.STARTS_WITH, "The"));
         assertThat(FilterExpressionParser.parse("genre in ('FICTION', 'HISTORY')").getConditions())
                 .containsExactly(FilterCriteria.of("genre", SearchOperator.IN,
@@ -119,7 +119,7 @@ class FilterExpressionParserTest {
 
         assertThat(FilterExpressionParser.parse("title likecs 'Hobbit'")
                 .getConditions().get(0).isCaseSensitive()).isTrue();
-        assertThat(FilterExpressionParser.parse("containscs(title, 'Hobbit')")
+        assertThat(FilterExpressionParser.parse("title startswithcs 'The'")
                 .getConditions().get(0).isCaseSensitive()).isTrue();
         assertThat(FilterExpressionParser.parse("genre incs ('FICTION')")
                 .getConditions().get(0).isCaseSensitive()).isTrue();
