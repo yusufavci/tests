@@ -18,13 +18,12 @@ import java.util.Locale;
  * <pre>
  * expr        := andExpr ("or" andExpr)*
  * andExpr     := primaryExpr ("and" primaryExpr)*
- * primaryExpr := "(" expr ")" | comparison | function
+ * primaryExpr := "(" expr ")" | comparison
  * comparison  := path op value
  *              | path "in" "(" value ("," value)* ")"
  *              | path "between" value "and" value
  *              | path "is" ["not"] "null" | path "isnot" "null"
- * function    := ("contains"|"startswith"|"endswith") "(" path "," value ")"
- * op          := eq | ne | gt | ge | lt | le | like
+ * op          := eq | ne | gt | ge | lt | le | like | startswith | endswith
  *                (aliases: neq, gte, lte; text ops accept a "cs" suffix)
  * value       := 'string' | number | true | false | null | bareword
  * </pre>
@@ -33,7 +32,7 @@ import java.util.Locale;
  * <pre>
  * name eq 'aaa' and salary isnot null
  * genre eq FICTION or (genre eq SCIENCE and pages gt 600)
- * contains(author.name, 'tolkien') and publishedDate between '1930-01-01' and '1960-12-31'
+ * author.name like 'tolkien' and publishedDate between '1930-01-01' and '1960-12-31'
  * status notin ('CLOSED', 'ARCHIVED')
  * </pre>
  *
@@ -45,9 +44,8 @@ import java.util.Locale;
  *
  * <p>Text comparisons are case-insensitive by default. Appending {@code cs}
  * to a text operator ({@code eqcs}, {@code necs}, {@code likecs},
- * {@code startswithcs}, {@code endswithcs}, {@code incs}, {@code notincs}) or
- * function ({@code containscs(...)}) switches that condition to exact-case
- * matching.</p>
+ * {@code startswithcs}, {@code endswithcs}, {@code incs}, {@code notincs})
+ * switches that condition to exact-case matching.</p>
  */
 public final class FilterExpressionParser {
 
@@ -119,34 +117,7 @@ public final class FilterExpressionParser {
     }
 
     private Object parseComparison() {
-        Token first = expect(TokenType.IDENT);
-        String lower = first.text.toLowerCase(Locale.ROOT);
-
-        // OData string functions: contains(path, 'x'), startswith(...), endswith(...);
-        // a "cs" suffix (containscs, ...) makes the match exact-case.
-        if (peek().type == TokenType.LPAREN) {
-            boolean fnCaseSensitive = stripCsSuffix(lower) != null;
-            String fnName = fnCaseSensitive ? stripCsSuffix(lower) : lower;
-            SearchOperator fn = switch (fnName) {
-                case "contains" -> SearchOperator.LIKE;
-                case "startswith" -> SearchOperator.STARTS_WITH;
-                case "endswith" -> SearchOperator.ENDS_WITH;
-                default -> throw error(first, "Unknown function '" + first.text + "'");
-            };
-            next();
-            Token path = expect(TokenType.IDENT);
-            expect(TokenType.COMMA);
-            Object value = parseValue();
-            expect(TokenType.RPAREN);
-            if (value == NULL_LITERAL) {
-                throw error(first, "Function '" + lower + "' does not accept null");
-            }
-            FilterCriteria criteria = FilterCriteria.of(path.text, fn, value);
-            criteria.setCaseSensitive(fnCaseSensitive);
-            return criteria;
-        }
-
-        String field = first.text;
+        String field = expect(TokenType.IDENT).text;
         Token opToken = expect(TokenType.IDENT);
         String op = opToken.text.toLowerCase(Locale.ROOT);
 

@@ -5,7 +5,7 @@ A small, dependency-light toolkit for building dynamic queries with Spring Data 
 
 - **OData-style filter strings** sent as GET query parameters —
   `?filter=name eq 'aaa' and salary isnot null` — with `and`/`or`, parentheses, `in`,
-  `between`, and `contains()`/`startswith()`/`endswith()` functions
+  `between`, and `like`/`startswith`/`endswith` text operators
 - **Nested AND/OR condition trees** of arbitrary depth
 - **14 operators**: `EQUALS`, `NOT_EQUALS`, `GREATER_THAN`, `GREATER_THAN_OR_EQUAL`,
   `LESS_THAN`, `LESS_THAN_OR_EQUAL`, `LIKE`, `STARTS_WITH`, `ENDS_WITH`,
@@ -100,7 +100,7 @@ Example requests (values URL-encoded by the client):
 GET /employees/search?filter=name eq 'aaa' and salary isnot null
 GET /employees/search?filter=genre eq FICTION or (genre eq SCIENCE and pages gt 600)
                      &orderBy=pages desc, title asc&page=0&size=20
-GET /employees/search?filter=contains(author.name, 'tolkien') and
+GET /employees/search?filter=author.name like 'tolkien' and
                      publishedDate between '1930-01-01' and '1960-12-31'
 GET /employees/search?filter=status notin ('CLOSED', 'ARCHIVED')
 ```
@@ -115,7 +115,7 @@ grouping:
 | `field eq value` / `field ne value` | equals / not equals — case-insensitive on text attributes (`eq null` → is-null) |
 | `field gt/ge/lt/le value` | comparisons (aliases `gte`, `lte`, `neq`) |
 | `field like 'x'` | case-insensitive contains |
-| `contains(field, 'x')`, `startswith(field, 'x')`, `endswith(field, 'x')` | OData string functions |
+| `field startswith 'x'` / `field endswith 'x'` | case-insensitive prefix / suffix |
 | `field in ('a', 'b')` / `notin` | membership — case-insensitive on text attributes |
 | `field between 1 and 10` | inclusive range |
 | `field is null`, `field is not null`, `field isnot null`, `field isnotnull` | null checks |
@@ -133,8 +133,7 @@ mirrored:
          └─ exact case              └─ case-insensitive
 ```
 
-`eqcs`, `necs`, `likecs`, `startswithcs`, `endswithcs`, `incs`, `notincs`,
-`containscs(...)`, `startswithcs(...)`, `endswithcs(...)`.
+`eqcs`, `necs`, `likecs`, `startswithcs`, `endswithcs`, `incs`, `notincs`.
 
 Syntax errors and invalid values return `400 Bad Request` with an RFC 9457 problem body
 (via `QueryExceptionHandler`, active when the `web` package is component-scanned):
