@@ -63,14 +63,6 @@ public class SpecificationBuilder<T> {
         return add(field, SearchOperator.LIKE, value);
     }
 
-    public SpecificationBuilder<T> startsWith(String field, String value) {
-        return add(field, SearchOperator.STARTS_WITH, value);
-    }
-
-    public SpecificationBuilder<T> endsWith(String field, String value) {
-        return add(field, SearchOperator.ENDS_WITH, value);
-    }
-
     public SpecificationBuilder<T> in(String field, Object... values) {
         return in(field, Arrays.asList(values));
     }

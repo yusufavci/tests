@@ -15,10 +15,6 @@ public enum SearchOperator {
     LESS_THAN_OR_EQUAL,
     /** Case-insensitive "contains". */
     LIKE,
-    /** Case-insensitive prefix match. */
-    STARTS_WITH,
-    /** Case-insensitive suffix match. */
-    ENDS_WITH,
     /** Case-insensitive when the attribute is a String. */
     IN,
     /** Case-insensitive when the attribute is a String. */

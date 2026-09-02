@@ -5,11 +5,11 @@ A small, dependency-light toolkit for building dynamic queries with Spring Data 
 
 - **OData-style filter strings** sent as GET query parameters —
   `?filter=name eq 'aaa' and salary isnot null` — with `and`/`or`, parentheses, `in`,
-  `between`, and `like`/`startswith`/`endswith` text operators
+  `between`, and the `like` text operator
 - **Nested AND/OR condition trees** of arbitrary depth
-- **14 operators**: `EQUALS`, `NOT_EQUALS`, `GREATER_THAN`, `GREATER_THAN_OR_EQUAL`,
-  `LESS_THAN`, `LESS_THAN_OR_EQUAL`, `LIKE`, `STARTS_WITH`, `ENDS_WITH`,
-  `IN`, `NOT_IN`, `IS_NULL`, `IS_NOT_NULL`, `BETWEEN`
+- **12 operators**: `EQUALS`, `NOT_EQUALS`, `GREATER_THAN`, `GREATER_THAN_OR_EQUAL`,
+  `LESS_THAN`, `LESS_THAN_OR_EQUAL`, `LIKE`, `IN`, `NOT_IN`, `IS_NULL`,
+  `IS_NOT_NULL`, `BETWEEN`
 - **Nested property paths** with dot notation (`author.address.city`) — associations are
   resolved with reused LEFT joins, and queries through collection associations are
   automatically made `distinct`
@@ -112,13 +112,12 @@ grouping:
 
 | Syntax | Meaning |
 |---|---|
-| `field eq value` / `field ne value` | equals / not equals — case-insensitive on text attributes (`eq null` → is-null) |
-| `field gt/ge/lt/le value` | comparisons (aliases `gte`, `lte`, `neq`) |
+| `field eq value` / `field ne value` | equals / not equals — case-insensitive on text attributes |
+| `field gt/ge/lt/le value` | comparisons |
 | `field like 'x'` | case-insensitive contains |
-| `field startswith 'x'` / `field endswith 'x'` | case-insensitive prefix / suffix |
 | `field in ('a', 'b')` / `notin` | membership — case-insensitive on text attributes |
 | `field between 1 and 10` | inclusive range |
-| `field is null`, `field is not null`, `field isnot null`, `field isnotnull` | null checks |
+| `field is null`, `field is not null`, `field isnot null` | null checks |
 
 Values: single-quoted strings (`''` escapes a quote), numbers, `true`/`false`, `null`,
 and bare words (handy for enum constants: `genre eq FICTION`). Fields support dot
@@ -133,7 +132,7 @@ mirrored:
          └─ exact case              └─ case-insensitive
 ```
 
-`eqcs`, `necs`, `likecs`, `startswithcs`, `endswithcs`, `incs`, `notincs`.
+`eqcs`, `necs`, `likecs`, `incs`, `notincs`.
 
 Syntax errors and invalid values return `400 Bad Request` with an RFC 9457 problem body
 (via `QueryExceptionHandler`, active when the `web` package is component-scanned):
@@ -168,7 +167,6 @@ conditions and further groups, combined by that group's operator (`AND` is the d
 | `EQUALS` / `NOT_EQUALS` | `value` | Works for enums/dates/UUIDs given as strings; case-insensitive on String attributes |
 | `GREATER_THAN` … `LESS_THAN_OR_EQUAL` | `value` | Attribute must be `Comparable` |
 | `LIKE` | `value` | Case-insensitive *contains* |
-| `STARTS_WITH` / `ENDS_WITH` | `value` | Case-insensitive |
 | `IN` / `NOT_IN` | `values` | Non-empty list; case-insensitive on String attributes |
 | `IS_NULL` / `IS_NOT_NULL` | — | Also works on associations (`author isnot null`) |
 | `BETWEEN` | `values` | Exactly two entries, inclusive |
@@ -190,7 +188,7 @@ Invalid input (unknown field, wrong value count, unconvertible value) fails fast
   case-insensitive via `LOWER(column)`; on large tables consider a function-based index
   on `LOWER(column)` for the frequently filtered text columns. The `cs` variants compare
   the raw column and can use plain indexes. From code, exact-case conditions are built
-  with `FilterCriteria.of(...).caseSensitive()`.
+  with `FilterCriteria.of(...).exactCase()`.
 
 ## Running the tests
 

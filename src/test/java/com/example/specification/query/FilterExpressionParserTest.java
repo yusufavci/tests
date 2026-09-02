@@ -63,17 +63,18 @@ class FilterExpressionParserTest {
     }
 
     @Test
-    void nullLiteralsAndAliases() {
-        assertThat(FilterExpressionParser.parse("author eq null").getConditions())
-                .containsExactly(FilterCriteria.of("author", SearchOperator.IS_NULL));
-        assertThat(FilterExpressionParser.parse("author ne null").getConditions())
-                .containsExactly(FilterCriteria.of("author", SearchOperator.IS_NOT_NULL));
+    void nullChecks() {
         assertThat(FilterExpressionParser.parse("author is null").getConditions())
                 .containsExactly(FilterCriteria.of("author", SearchOperator.IS_NULL));
         assertThat(FilterExpressionParser.parse("author is not null").getConditions())
                 .containsExactly(FilterCriteria.of("author", SearchOperator.IS_NOT_NULL));
-        assertThat(FilterExpressionParser.parse("author isnotnull").getConditions())
+        assertThat(FilterExpressionParser.parse("author isnot null").getConditions())
                 .containsExactly(FilterCriteria.of("author", SearchOperator.IS_NOT_NULL));
+
+        // eq/ne no longer double as null checks.
+        assertThatThrownBy(() -> FilterExpressionParser.parse("author eq null"))
+                .isInstanceOf(QueryParseException.class)
+                .hasMessageContaining("is null");
     }
 
     @Test
@@ -89,8 +90,6 @@ class FilterExpressionParserTest {
     void textOperatorsAndLists() {
         assertThat(FilterExpressionParser.parse("author.name like 'tolkien'").getConditions())
                 .containsExactly(FilterCriteria.of("author.name", SearchOperator.LIKE, "tolkien"));
-        assertThat(FilterExpressionParser.parse("title startswith 'The'").getConditions())
-                .containsExactly(FilterCriteria.of("title", SearchOperator.STARTS_WITH, "The"));
         assertThat(FilterExpressionParser.parse("genre in ('FICTION', 'HISTORY')").getConditions())
                 .containsExactly(FilterCriteria.of("genre", SearchOperator.IN,
                         java.util.List.of((Object) "FICTION", "HISTORY")));
@@ -113,20 +112,18 @@ class FilterExpressionParserTest {
     void csSuffixMarksConditionCaseSensitive() {
         FilterCriteria criteria = FilterExpressionParser.parse("title eqcs 'The Hobbit'")
                 .getConditions().get(0);
-        assertThat(criteria.getOperator()).isEqualTo(SearchOperator.EQUALS);
-        assertThat(criteria.getValue()).isEqualTo("The Hobbit");
-        assertThat(criteria.isCaseSensitive()).isTrue();
+        assertThat(criteria.operator()).isEqualTo(SearchOperator.EQUALS);
+        assertThat(criteria.value()).isEqualTo("The Hobbit");
+        assertThat(criteria.caseSensitive()).isTrue();
 
         assertThat(FilterExpressionParser.parse("title likecs 'Hobbit'")
-                .getConditions().get(0).isCaseSensitive()).isTrue();
-        assertThat(FilterExpressionParser.parse("title startswithcs 'The'")
-                .getConditions().get(0).isCaseSensitive()).isTrue();
+                .getConditions().get(0).caseSensitive()).isTrue();
         assertThat(FilterExpressionParser.parse("genre incs ('FICTION')")
-                .getConditions().get(0).isCaseSensitive()).isTrue();
+                .getConditions().get(0).caseSensitive()).isTrue();
 
         // Plain spellings stay case-insensitive; cs on non-text ops is unknown.
         assertThat(FilterExpressionParser.parse("title eq 'x'")
-                .getConditions().get(0).isCaseSensitive()).isFalse();
+                .getConditions().get(0).caseSensitive()).isFalse();
         assertThatThrownBy(() -> FilterExpressionParser.parse("pages gtcs 5"))
                 .isInstanceOf(QueryParseException.class)
                 .hasMessageContaining("Unknown operator 'gtcs'");

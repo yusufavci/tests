@@ -1,7 +1,6 @@
 package com.example.specification;
 
 import java.util.List;
-import java.util.Objects;
 
 /**
  * A single filter condition, e.g. {@code price GREATER_THAN 10} or
@@ -12,109 +11,30 @@ import java.util.Objects;
  * join. Single-value operators read {@code value}; {@code IN}, {@code NOT_IN}
  * and {@code BETWEEN} read {@code values}; {@code IS_NULL} / {@code IS_NOT_NULL}
  * need neither. Text comparisons are case-insensitive unless
- * {@code caseSensitive} is set.</p>
+ * {@code caseSensitive} is set (see {@link #exactCase()}).</p>
  */
-public class FilterCriteria {
-
-    private String field;
-    private SearchOperator operator;
-    private Object value;
-    private List<Object> values;
-    private boolean caseSensitive;
-
-    public FilterCriteria() {
-    }
-
-    public FilterCriteria(String field, SearchOperator operator, Object value) {
-        this.field = field;
-        this.operator = operator;
-        this.value = value;
-    }
-
-    public FilterCriteria(String field, SearchOperator operator, List<Object> values) {
-        this.field = field;
-        this.operator = operator;
-        this.values = values;
-    }
+public record FilterCriteria(String field, SearchOperator operator, Object value,
+                             List<Object> values, boolean caseSensitive) {
 
     public static FilterCriteria of(String field, SearchOperator operator) {
-        return new FilterCriteria(field, operator, (Object) null);
+        return new FilterCriteria(field, operator, null, null, false);
     }
 
     public static FilterCriteria of(String field, SearchOperator operator, Object value) {
-        return new FilterCriteria(field, operator, value);
+        return new FilterCriteria(field, operator, value, null, false);
     }
 
     public static FilterCriteria of(String field, SearchOperator operator, List<Object> values) {
-        return new FilterCriteria(field, operator, values);
+        return new FilterCriteria(field, operator, null, values, false);
     }
 
-    public String getField() {
-        return field;
+    /** Copy of this condition that matches text with exact case. */
+    public FilterCriteria exactCase() {
+        return new FilterCriteria(field, operator, value, values, true);
     }
 
-    public void setField(String field) {
-        this.field = field;
-    }
-
-    public SearchOperator getOperator() {
-        return operator;
-    }
-
-    public void setOperator(SearchOperator operator) {
-        this.operator = operator;
-    }
-
-    public Object getValue() {
-        return value;
-    }
-
-    public void setValue(Object value) {
-        this.value = value;
-    }
-
-    public List<Object> getValues() {
-        return values;
-    }
-
-    public void setValues(List<Object> values) {
-        this.values = values;
-    }
-
-    public boolean isCaseSensitive() {
-        return caseSensitive;
-    }
-
-    public void setCaseSensitive(boolean caseSensitive) {
-        this.caseSensitive = caseSensitive;
-    }
-
-    /** Fluent switch to exact-case matching for text comparisons. */
-    public FilterCriteria caseSensitive() {
-        this.caseSensitive = true;
-        return this;
-    }
-
-    @Override
-    public String toString() {
-        return "FilterCriteria{" + field + " " + operator + " "
-                + (values != null ? values : value) + "}";
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (!(o instanceof FilterCriteria that)) {
-            return false;
-        }
-        return Objects.equals(field, that.field)
-                && operator == that.operator
-                && Objects.equals(value, that.value)
-                && Objects.equals(values, that.values)
-                && caseSensitive == that.caseSensitive;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(field, operator, value, values, caseSensitive);
+    /** Copy of this condition targeting another field (used by field mappings). */
+    public FilterCriteria withField(String newField) {
+        return new FilterCriteria(newField, operator, value, values, caseSensitive);
     }
 }

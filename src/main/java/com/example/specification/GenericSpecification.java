@@ -74,17 +74,17 @@ public class GenericSpecification<T> implements Specification<T> {
     @SuppressWarnings({"unchecked", "rawtypes"})
     private Predicate buildConditionPredicate(FilterCriteria criteria, Root<T> root,
                                               CriteriaBuilder cb, boolean[] joinedCollection) {
-        if (criteria.getField() == null || criteria.getField().isBlank()) {
+        if (criteria.field() == null || criteria.field().isBlank()) {
             throw new IllegalArgumentException("Filter condition is missing a field: " + criteria);
         }
-        if (criteria.getOperator() == null) {
+        if (criteria.operator() == null) {
             throw new IllegalArgumentException("Filter condition is missing an operator: " + criteria);
         }
 
-        Path<?> path = resolvePath(root, criteria.getField(), joinedCollection);
+        Path<?> path = resolvePath(root, criteria.field(), joinedCollection);
         Class<?> javaType = path.getJavaType();
 
-        return switch (criteria.getOperator()) {
+        return switch (criteria.operator()) {
             case EQUALS -> equal(cb, path, criteria, javaType);
             case NOT_EQUALS -> cb.not(equal(cb, path, criteria, javaType));
             case GREATER_THAN ->
@@ -95,9 +95,7 @@ public class GenericSpecification<T> implements Specification<T> {
                     cb.lessThan((Expression<Comparable>) path, (Comparable) convert(criteria, javaType));
             case LESS_THAN_OR_EQUAL ->
                     cb.lessThanOrEqualTo((Expression<Comparable>) path, (Comparable) convert(criteria, javaType));
-            case LIKE -> like(cb, path, criteria, "%", "%");
-            case STARTS_WITH -> like(cb, path, criteria, "", "%");
-            case ENDS_WITH -> like(cb, path, criteria, "%", "");
+            case LIKE -> like(cb, path, criteria);
             case IN -> in(cb, path, criteria, javaType);
             case NOT_IN -> cb.not(in(cb, path, criteria, javaType));
             case IS_NULL -> cb.isNull(path);
@@ -110,7 +108,7 @@ public class GenericSpecification<T> implements Specification<T> {
     private Predicate equal(CriteriaBuilder cb, Path<?> path, FilterCriteria criteria,
                             Class<?> javaType) {
         Object value = convert(criteria, javaType);
-        if (value instanceof String text && !criteria.isCaseSensitive()) {
+        if (value instanceof String text && !criteria.caseSensitive()) {
             return cb.equal(cb.lower(path.as(String.class)), text.toLowerCase(Locale.ROOT));
         }
         return cb.equal(path, value);
@@ -120,7 +118,7 @@ public class GenericSpecification<T> implements Specification<T> {
     private Predicate in(CriteriaBuilder cb, Path<?> path, FilterCriteria criteria,
                          Class<?> javaType) {
         List<Object> values = convertList(criteria, javaType);
-        if (javaType == String.class && !criteria.isCaseSensitive()) {
+        if (javaType == String.class && !criteria.caseSensitive()) {
             return cb.lower(path.as(String.class))
                     .in(values.stream().map(v -> v.toString().toLowerCase(Locale.ROOT)).toList());
         }
@@ -133,44 +131,44 @@ public class GenericSpecification<T> implements Specification<T> {
         List<Object> range = convertList(criteria, javaType);
         if (range.size() != 2) {
             throw new IllegalArgumentException(
-                    "BETWEEN expects exactly 2 values for field '" + criteria.getField() + "'");
+                    "BETWEEN expects exactly 2 values for field '" + criteria.field() + "'");
         }
         return cb.between((Expression<Comparable>) path,
                 (Comparable) range.get(0), (Comparable) range.get(1));
     }
 
-    private Predicate like(CriteriaBuilder cb, Path<?> path, FilterCriteria criteria,
-                           String prefix, String suffix) {
+    /** Case-insensitive "contains", unless the condition opts into exact case. */
+    private Predicate like(CriteriaBuilder cb, Path<?> path, FilterCriteria criteria) {
         Object value = requireValue(criteria);
-        if (criteria.isCaseSensitive()) {
-            return cb.like(path.as(String.class), prefix + value + suffix);
+        if (criteria.caseSensitive()) {
+            return cb.like(path.as(String.class), "%" + value + "%");
         }
-        String pattern = prefix + value.toString().toLowerCase(Locale.ROOT) + suffix;
-        return cb.like(cb.lower(path.as(String.class)), pattern);
+        return cb.like(cb.lower(path.as(String.class)),
+                "%" + value.toString().toLowerCase(Locale.ROOT) + "%");
     }
 
     private Object convert(FilterCriteria criteria, Class<?> targetType) {
-        return ValueConverter.convert(requireValue(criteria), targetType, criteria.getField());
+        return ValueConverter.convert(requireValue(criteria), targetType, criteria.field());
     }
 
     private List<Object> convertList(FilterCriteria criteria, Class<?> targetType) {
-        List<Object> values = criteria.getValues();
+        List<Object> values = criteria.values();
         if (values == null || values.isEmpty()) {
             throw new IllegalArgumentException(
-                    criteria.getOperator() + " requires non-empty 'values' for field '" + criteria.getField() + "'");
+                    criteria.operator() + " requires non-empty 'values' for field '" + criteria.field() + "'");
         }
         List<Object> converted = new ArrayList<>(values.size());
         for (Object value : values) {
-            converted.add(ValueConverter.convert(value, targetType, criteria.getField()));
+            converted.add(ValueConverter.convert(value, targetType, criteria.field()));
         }
         return converted;
     }
 
     private Object requireValue(FilterCriteria criteria) {
-        Object value = criteria.getValue();
+        Object value = criteria.value();
         if (value == null) {
             throw new IllegalArgumentException(
-                    criteria.getOperator() + " requires a 'value' for field '" + criteria.getField() + "'");
+                    criteria.operator() + " requires a 'value' for field '" + criteria.field() + "'");
         }
         return value;
     }

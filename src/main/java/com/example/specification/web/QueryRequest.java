@@ -96,9 +96,7 @@ public class QueryRequest {
         if (fieldMappings.isEmpty()) {
             return;
         }
-        for (FilterCriteria criteria : group.getConditions()) {
-            criteria.setField(mapField(criteria.getField()));
-        }
+        group.getConditions().replaceAll(criteria -> criteria.withField(mapField(criteria.field())));
         for (FilterGroup nested : group.getGroups()) {
             applyFieldMappings(nested);
         }

@@ -23,9 +23,9 @@ import java.util.Locale;
  *              | path "in" "(" value ("," value)* ")"
  *              | path "between" value "and" value
  *              | path "is" ["not"] "null" | path "isnot" "null"
- * op          := eq | ne | gt | ge | lt | le | like | startswith | endswith
- *                (aliases: neq, gte, lte; text ops accept a "cs" suffix)
- * value       := 'string' | number | true | false | null | bareword
+ * op          := eq | ne | gt | ge | lt | le | like
+ *                (text ops accept a "cs" suffix for exact-case matching)
+ * value       := 'string' | number | true | false | bareword
  * </pre>
  *
  * <p>Examples:</p>
@@ -37,15 +37,15 @@ import java.util.Locale;
  * </pre>
  *
  * <p>String literals use single quotes with {@code ''} as the escape for a
- * quote. Bare words (e.g. enum constants) are treated as string values.
- * {@code eq null} / {@code ne null} map to IS_NULL / IS_NOT_NULL. Negation is
- * expressed through the negated operators themselves ({@code ne},
+ * quote. Bare words (e.g. enum constants) are treated as string values. Null
+ * checks use {@code is null} / {@code is not null} / {@code isnot null}.
+ * Negation is expressed through the negated operators themselves ({@code ne},
  * {@code notin}, the null checks); there is no {@code not} keyword.</p>
  *
  * <p>Text comparisons are case-insensitive by default. Appending {@code cs}
  * to a text operator ({@code eqcs}, {@code necs}, {@code likecs},
- * {@code startswithcs}, {@code endswithcs}, {@code incs}, {@code notincs})
- * switches that condition to exact-case matching.</p>
+ * {@code incs}, {@code notincs}) switches that condition to exact-case
+ * matching.</p>
  */
 public final class FilterExpressionParser {
 
@@ -54,7 +54,7 @@ public final class FilterExpressionParser {
 
     /** Text operators that accept the exact-case "cs" suffix. */
     private static final java.util.Set<String> TEXT_OPERATORS =
-            java.util.Set.of("eq", "ne", "neq", "like", "startswith", "endswith", "in", "notin");
+            java.util.Set.of("eq", "ne", "like", "in", "notin");
 
     private final List<Token> tokens;
     private int pos;
@@ -130,15 +130,13 @@ public final class FilterExpressionParser {
         }
 
         FilterCriteria criteria = switch (op) {
-            case "eq" -> valueOrNullCheck(field, SearchOperator.EQUALS, SearchOperator.IS_NULL);
-            case "ne", "neq" -> valueOrNullCheck(field, SearchOperator.NOT_EQUALS, SearchOperator.IS_NOT_NULL);
+            case "eq" -> FilterCriteria.of(field, SearchOperator.EQUALS, requireValue(op));
+            case "ne" -> FilterCriteria.of(field, SearchOperator.NOT_EQUALS, requireValue(op));
             case "gt" -> FilterCriteria.of(field, SearchOperator.GREATER_THAN, requireValue(op));
-            case "ge", "gte" -> FilterCriteria.of(field, SearchOperator.GREATER_THAN_OR_EQUAL, requireValue(op));
+            case "ge" -> FilterCriteria.of(field, SearchOperator.GREATER_THAN_OR_EQUAL, requireValue(op));
             case "lt" -> FilterCriteria.of(field, SearchOperator.LESS_THAN, requireValue(op));
-            case "le", "lte" -> FilterCriteria.of(field, SearchOperator.LESS_THAN_OR_EQUAL, requireValue(op));
+            case "le" -> FilterCriteria.of(field, SearchOperator.LESS_THAN_OR_EQUAL, requireValue(op));
             case "like" -> FilterCriteria.of(field, SearchOperator.LIKE, requireValue(op));
-            case "startswith" -> FilterCriteria.of(field, SearchOperator.STARTS_WITH, requireValue(op));
-            case "endswith" -> FilterCriteria.of(field, SearchOperator.ENDS_WITH, requireValue(op));
             case "in" -> FilterCriteria.of(field, SearchOperator.IN, parseValueList());
             case "notin" -> FilterCriteria.of(field, SearchOperator.NOT_IN, parseValueList());
             case "between" -> parseBetween(field, SearchOperator.BETWEEN);
@@ -147,12 +145,9 @@ public final class FilterExpressionParser {
                 expectKeyword("null");
                 yield FilterCriteria.of(field, SearchOperator.IS_NOT_NULL);
             }
-            case "isnull" -> FilterCriteria.of(field, SearchOperator.IS_NULL);
-            case "isnotnull" -> FilterCriteria.of(field, SearchOperator.IS_NOT_NULL);
             default -> throw error(opToken, "Unknown operator '" + opToken.text + "'");
         };
-        criteria.setCaseSensitive(caseSensitive);
-        return criteria;
+        return caseSensitive ? criteria.exactCase() : criteria;
     }
 
     /** Returns the operator without its "cs" suffix, or null when there is none. */
@@ -175,15 +170,6 @@ public final class FilterExpressionParser {
         expectKeyword("and");
         Object high = requireValue("between");
         return FilterCriteria.of(field, operator, List.of(low, high));
-    }
-
-    private FilterCriteria valueOrNullCheck(String field, SearchOperator operator,
-                                            SearchOperator nullOperator) {
-        Object value = parseValue();
-        if (value == NULL_LITERAL) {
-            return FilterCriteria.of(field, nullOperator);
-        }
-        return FilterCriteria.of(field, operator, value);
     }
 
     private List<Object> parseValueList() {
