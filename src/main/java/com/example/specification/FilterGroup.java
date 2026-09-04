@@ -22,8 +22,10 @@ public class FilterGroup implements Serializable {
     private static final long serialVersionUID = 1L;
 
     private LogicalOperator operator = LogicalOperator.AND;
-    private List<FilterCriteria> conditions = new ArrayList<>();
-    private List<FilterGroup> groups = new ArrayList<>();
+    // Declared as ArrayList (not List) so the fields themselves are
+    // serializable types, satisfying strict non-transient-field checkers.
+    private ArrayList<FilterCriteria> conditions = new ArrayList<>();
+    private ArrayList<FilterGroup> groups = new ArrayList<>();
 
     public FilterGroup() {
     }
@@ -69,7 +71,7 @@ public class FilterGroup implements Serializable {
     }
 
     public void setConditions(List<FilterCriteria> conditions) {
-        this.conditions = conditions != null ? conditions : new ArrayList<>();
+        this.conditions = conditions != null ? new ArrayList<>(conditions) : new ArrayList<>();
     }
 
     public List<FilterGroup> getGroups() {
@@ -77,6 +79,6 @@ public class FilterGroup implements Serializable {
     }
 
     public void setGroups(List<FilterGroup> groups) {
-        this.groups = groups != null ? groups : new ArrayList<>();
+        this.groups = groups != null ? new ArrayList<>(groups) : new ArrayList<>();
     }
 }
