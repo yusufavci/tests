@@ -1,5 +1,7 @@
 package com.example.specification;
 
+import java.io.Serial;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,7 +16,10 @@ import java.util.List;
  *
  * <p>is a top-level AND group with one condition and one nested OR group.</p>
  */
-public class FilterGroup {
+public class FilterGroup implements Serializable {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     private LogicalOperator operator = LogicalOperator.AND;
     private List<FilterCriteria> conditions = new ArrayList<>();

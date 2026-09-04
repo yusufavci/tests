@@ -1,5 +1,7 @@
 package com.example.specification;
 
+import java.io.Serial;
+
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Expression;
@@ -24,6 +26,11 @@ import java.util.Locale;
  * and EQUALS/NOT_EQUALS/IN/NOT_IN whenever the attribute is a String.
  */
 public class GenericSpecification<T> implements Specification<T> {
+
+    // Specification extends Serializable, so the class and its filter tree are
+    // serializable-friendly for strict IDE/static-analysis settings.
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     private final FilterGroup filter;
 

@@ -6,6 +6,7 @@ import com.example.specification.domain.Book;
 import com.example.specification.domain.BookRepository;
 import com.example.specification.domain.Genre;
 import com.example.specification.domain.TestData;
+import com.example.specification.query.FilterExpressionParser;
 import com.example.specification.web.QueryRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -163,6 +164,19 @@ class GenericSpecificationTest {
         assertThat(bookRepository.findAll(spec))
                 .extracting(Book::getTitle)
                 .containsExactly("The Art of Computer Programming");
+    }
+
+    @Test
+    void specificationIsSerializable() throws Exception {
+        Specification<Book> spec = new GenericSpecification<>(FilterExpressionParser.parse(
+                "title eq 'x' and (pages gt 1 or author isnot null)"));
+
+        var bytes = new java.io.ByteArrayOutputStream();
+        new java.io.ObjectOutputStream(bytes).writeObject(spec);
+        Object restored = new java.io.ObjectInputStream(
+                new java.io.ByteArrayInputStream(bytes.toByteArray())).readObject();
+
+        assertThat(restored).isInstanceOf(GenericSpecification.class);
     }
 
     @Test
