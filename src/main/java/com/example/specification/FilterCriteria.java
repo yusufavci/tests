@@ -1,5 +1,6 @@
 package com.example.specification;
 
+import java.io.Serializable;
 import java.util.List;
 
 /**
@@ -14,7 +15,7 @@ import java.util.List;
  * {@code caseSensitive} is set (see {@link #exactCase()}).</p>
  */
 public record FilterCriteria(String field, SearchOperator operator, Object value,
-                             List<Object> values, boolean caseSensitive) {
+                             List<Object> values, boolean caseSensitive) implements Serializable {
 
     public static FilterCriteria of(String field, SearchOperator operator) {
         return new FilterCriteria(field, operator, null, null, false);
